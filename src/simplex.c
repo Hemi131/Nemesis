@@ -124,7 +124,7 @@ void simplex_minimize(struct matrix *mat) {
 
 }
 
-int main() {
+/* int main() {
     struct matrix *mat;
     mat = matrix_allocate(3, 6, 0.0);
     matrix_set(mat, 0, 0, 1.0);
@@ -150,4 +150,4 @@ int main() {
     matrix_print(mat);
     matrix_free(&mat);
     return 0;
-}
+} */
