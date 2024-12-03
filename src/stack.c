@@ -22,14 +22,12 @@ struct stack *stack_alloc(const size_t capacity, const size_t item_size) {
 }
 
 int stack_init(struct stack *s, const size_t capacity, const size_t item_size) {
-    if (!s || capacity==0 || item_size==0)
-    {
+    if (!s || capacity == 0 || item_size == 0) {
         return 0;
     }
 
     s->items = malloc(capacity * item_size);
-    if (!s->items)
-    {
+    if (!s->items) {
         return 0;
     }
 
