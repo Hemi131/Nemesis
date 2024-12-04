@@ -172,69 +172,64 @@ int change_brackets(char *str) {
     return 1;
 } */
 
-struct rpn_item *rpn_item_create_number(mat_num_type number) {
-    struct rpn_item *new = malloc(sizeof(*new));
+int rpn_item_create_number(struct rpn_item *rpn_item, mat_num_type number) {
 
-    if (!new) {
-        return NULL;
+    if (!rpn_item) {
+        return 0;
     }
 
-    new->type = 'd';
-    new->data.number = number;
+    rpn_item->type = 'd';
+    rpn_item->data.number = number;
 
-    return new;
+    return 1;
 }
 
-struct rpn_item *rpn_item_create_variable(size_t variable) {
-    struct rpn_item *new = malloc(sizeof(*new));
+int rpn_item_create_variable(struct rpn_item *rpn_item, size_t variable) {
 
-    if (!new) {
-        return NULL;
+    if (!rpn_item) {
+        return 0;
     }
 
-    new->type = 'v';
-    new->data.variable = variable;
+    rpn_item->type = 'v';
+    rpn_item->data.variable = variable;
 
-    return new;
+    return 1;
 }
 
-struct rpn_item *rpn_item_create_operator_first_level(char operator) {
-    struct rpn_item *new = malloc(sizeof(*new));
+int rpn_item_create_operator_first_level(struct rpn_item *rpn_item, char operator) {
 
-    if (!new) {
-        return NULL;
+    if (!rpn_item) {
+        return 0;
     }
 
-    new->type = '1';
-    new->data.operator = operator;
+    rpn_item->type = '1';
+    rpn_item->data.operator = operator;
 
-    return new;
+    return 1;
 }
 
-struct rpn_item *rpn_item_create_operator_second_level(char operator) {
-    struct rpn_item *new = malloc(sizeof(*new));
+int rpn_item_create_operator_second_level(struct rpn_item *rpn_item, char operator) {
 
-    if (!new) {
-        return NULL;
+    if (!rpn_item) {
+        return 0;
     }
 
-    new->type = '2';
-    new->data.operator = operator;
+    rpn_item->type = '2';
+    rpn_item->data.operator = operator;
 
-    return new;
+    return 1;
 }
 
-struct rpn_item *rpn_item_create_bracket(char bracket) {
-    struct rpn_item *new = malloc(sizeof(*new));
+int rpn_item_create_bracket(struct rpn_item *rpn_item, char bracket) {
 
-    if (!new) {
-        return NULL;
+    if (!rpn_item) {
+        return 0;
     }
 
-    new->type = 'b';
-    new->data.bracket = bracket;
+    rpn_item->type = 'b';
+    rpn_item->data.bracket = bracket;
 
-    return new;
+    return 1;
 }
 
 struct evaluation_expression *create_evaluation_expression_constant(const size_t var_count, const mat_num_type constant) {
@@ -357,18 +352,22 @@ struct queue *parse_to_rpn(const char *str) {
     struct stack *s;
     struct queue *q;
 
-    int i, j, value;
+    int i, j, var_index;
     int last_was_number = 0;
 
     double number;
 
     char *endptr;
 
-    struct rpn_item *rpn_item;
+    struct rpn_item rpn_item;
 
     char *buffer = malloc((MAX_EXPRESSION_LENGTH + 1) * sizeof(char));
 
     if (!str) {
+        return NULL;
+    }
+
+    if(!buffer) {
         return NULL;
     }
 
@@ -388,61 +387,76 @@ struct queue *parse_to_rpn(const char *str) {
         switch (str[i]) {
             case '(': /* TODO: nekontroluju takovou tu matematickou konvenci s pořadím závorek {[()]} */
                 if (last_was_number) {
-                    rpn_item = rpn_item_create_operator_second_level('*');
-                    if (!rpn_item) {
-                        goto malloc_failed;
+                    if (!rpn_item_create_operator_second_level(&rpn_item, '*')) {
+                        goto failed;
                     }
-                    stack_push(s, rpn_item);
+
+                    if (!stack_push(s, &rpn_item)) {
+                        goto stack_failed;
+                    }
                 }
 
-                rpn_item = rpn_item_create_bracket('(');
-                if (!rpn_item) {
-                    goto malloc_failed;
+                if (!rpn_item_create_bracket(&rpn_item, '(')) {
+                    goto failed;
                 }
-                stack_push(s, rpn_item);
+
+                if (!stack_push(s, &rpn_item)) {
+                    goto stack_failed;
+                }
 
                 last_was_number = 0;
                 break;
             case ')':
-                while (stack_pop(s, rpn_item) && rpn_item->type != 'b') {
-                    queue_enqueue(q, rpn_item);
+                while (stack_pop(s, &rpn_item) && rpn_item.type != 'b') {
+                    if (!queue_enqueue(q, &rpn_item)) {
+                        goto queue_failed;
+                    }
                 }
-                free(rpn_item);
 
                 last_was_number = 0;
                 break;
             case '+':
             case '-':
-                while (stack_head(s, rpn_item) && rpn_item->type == '2') {
-                    stack_pop(s, rpn_item);
-                    queue_enqueue(q, rpn_item);
+                while (stack_head(s, &rpn_item) && rpn_item.type == '2') {
+                    if (!stack_pop(s, &rpn_item)) {
+                        goto stack_failed;
+                    }
+                    if (!queue_enqueue(q, &rpn_item)) {
+                        goto queue_failed;
+                    }
                 }
-                rpn_item = rpn_item_create_operator_first_level(str[i]);
-                if (!rpn_item) {
-                    goto malloc_failed;
+                if (!rpn_item_create_operator_first_level(&rpn_item, str[i])) {
+                    goto failed;
                 }
-                stack_push(s, rpn_item);
+
+                if (!stack_push(s, &rpn_item)) {
+                    goto stack_failed;
+                }
 
                 last_was_number = 0;
                 break;
             case '*':
             case '/':
-                rpn_item = rpn_item_create_operator_second_level(str[i]);
-                if (!rpn_item) {
-                    goto malloc_failed;
+                if (!rpn_item_create_operator_second_level(&rpn_item, str[i])) {
+                    goto failed;
                 }
-                stack_push(s, rpn_item);
+        
+                if (!stack_push(s, &rpn_item)) {
+                    goto stack_failed;
+                }
 
                 last_was_number = 0;
                 break;
             case '@':
-
                 if (last_was_number) {
-                    rpn_item = rpn_item_create_operator_second_level('*');
-                    if (!rpn_item) {
-                        goto malloc_failed;
+
+                    if (!rpn_item_create_operator_second_level(&rpn_item, '*')) {
+                        goto failed;
                     }
-                    stack_push(s, rpn_item);
+
+                    if (!stack_push(s, &rpn_item)) {
+                        goto stack_failed;
+                    }
                 }
 
                 for (j = 1; str[i + j] != '@'; ++j) {
@@ -450,18 +464,16 @@ struct queue *parse_to_rpn(const char *str) {
                 }
                 buffer[j - 1] = '\0';
 
-                value = strtol(buffer, &endptr, 10);
+                var_index = strtol(buffer, &endptr, 10);
                 if (*endptr != '\0') {
                     goto wrong_number;
                 }
 
-                rpn_item = rpn_item_create_variable(value);
-
-                if (!rpn_item) {
-                    goto malloc_failed;
+                if (!rpn_item_create_variable(&rpn_item, var_index)) {
+                    goto failed;
                 }
 
-                if (!queue_enqueue(q, rpn_item)) {
+                if (!queue_enqueue(q, &rpn_item)) {
                     goto queue_failed;
                 }
 
@@ -485,13 +497,11 @@ struct queue *parse_to_rpn(const char *str) {
                     goto wrong_number;
                 }
 
-                rpn_item = rpn_item_create_number(number);
-
-                if (!rpn_item) {
-                    goto malloc_failed;
+                if (!rpn_item_create_number(&rpn_item, number)) {
+                    goto failed;
                 }
 
-                if (!queue_enqueue(q, rpn_item)) {
+                if (!queue_enqueue(q, &rpn_item)) {
                     goto queue_failed;
                 }
 
@@ -501,14 +511,18 @@ struct queue *parse_to_rpn(const char *str) {
         }
     }
 
-    while (stack_pop(s, rpn_item)) {
-        queue_enqueue(q, rpn_item);
+    while (stack_pop(s, &rpn_item)) {
+        if (!queue_enqueue(q, &rpn_item)) {
+            goto queue_failed;
+        }
     }
 
     goto end;
 
-malloc_failed:
-    printf("malloc failed\n");
+stack_failed:
+    printf("stack failed\n");
+failed:
+    printf("failed\n");
 wrong_number:
     printf("wrong number\n");
 queue_failed:

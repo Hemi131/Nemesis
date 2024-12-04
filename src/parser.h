@@ -46,35 +46,35 @@ struct rpn_item {
  * \param number Hodnota čísla.
  * \return struct rpn_item* Ukazatel na nově vytvořený prvek RPN.
  */
-struct rpn_item *rpn_item_create_number(mat_num_type number);
+int rpn_item_create_number(struct rpn_item *rpn_item, mat_num_type number);
 
 /**
  * \brief Funkce vytvoří nový prvek RPN typu variable.
  * \param variable Index proměnné v poli povolených proměnných.
  * \return struct rpn_item* Ukazatel na nově vytvořený prvek RPN.
  */
-struct rpn_item *rpn_item_create_variable(size_t variable);
+int rpn_item_create_variable(struct rpn_item *rpn_item, size_t variable);
 
 /**
  * \brief Funkce vytvoří nový prvek RPN typu operator.
  * \param operator Operátor.
  * \return struct rpn_item* Ukazatel na nově vytvořený prvek RPN.
  */
-struct rpn_item *rpn_item_create_operator_first_level(char operator);
+int rpn_item_create_operator_first_level(struct rpn_item *rpn_item, char operator);
 
 /**
  * \brief Funkce vytvoří nový prvek RPN typu operator.
  * \param operator Operátor.
  * \return struct rpn_item* Ukazatel na nově vytvořený prvek RPN.
  */
-struct rpn_item *rpn_item_create_operator_second_level(char operator);
+int rpn_item_create_operator_second_level(struct rpn_item *rpn_item, char operator);
 
 /**
  * \brief Funkce vytvoří nový prvek RPN typu operator.
  * \param bracket Závorka.
  * \return struct rpn_item* Ukazatel na nově vytvořený prvek RPN.
  */
-struct rpn_item *rpn_item_create_bracket(char bracket);
+int rpn_item_create_bracket(struct rpn_item *rpn_item, char bracket);
 
 /**
  * \brief Struktura pro vyhodnocení výrazu.

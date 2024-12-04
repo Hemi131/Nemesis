@@ -9,9 +9,9 @@ int main() {
     /* printf("Hello, World!\n"); */
     char *str = malloc(100 * sizeof(char));
     struct queue *q;
-    struct rpn_item *item;
+    struct rpn_item item;
 
-    strcpy(str, "4+18/(2(9-3))");
+    strcpy(str, "2@5@+5");
     q = parse_to_rpn(str);
 
     if (!q) {
@@ -20,28 +20,26 @@ int main() {
     }
 
     printf("RPN: ");
-    item = malloc(sizeof(*item));
-    while (queue_dequeue(q, item)) {
-        switch (item->type) {
+    while (queue_dequeue(q, &item)) {
+        switch (item.type) {
             case 'd':
-                printf("%f ", item->data.number);
+                printf("%f ", item.data.number);
                 break;
             case 'v':
-                /* printf("var_%zu ", item->data.variable); */
+                printf("var_%lu ", item.data.variable);
                 break;
             case '1':
             case '2':
-                printf("%c ", item->data.operator);
+                printf("%c ", item.data.operator);
                 break;
             default:
                 printf("Unknown type\n");
                 break;
         }
-
-        free(item);
-        item = malloc(sizeof(*item));
     }
-    free(item);
+
+    queue_dealloc(&q);
+    free(str);
     return 0;
 }
 
