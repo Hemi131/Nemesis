@@ -88,4 +88,6 @@ int queue_front(const struct queue *q, void *item);
  */
 size_t queue_item_count(const struct queue *q);
 
+void queue_print(const struct queue *q);
+
 #endif

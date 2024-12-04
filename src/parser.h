@@ -11,6 +11,22 @@
 #include <stddef.h>
 
 /**
+ * \brief Funkce porovnává délky dvou řetězců.
+ * \param str1 První řetězec.
+ * \param str2 Druhý řetězec.
+ * \return int -1, pokud je první řetězec kratší, 0 pokud jsou stejně dlouhé, 1 pokud je první řetězec delší.
+ */
+int strlencmp(const char *str1, const char *str2);
+
+/**
+ * \brief Funkce odstraní všechny výskyty podřetězce ze zadaného řetězce.
+ * \param str Řetězec.
+ * \param substr Podřetězec.
+ * \return int 1, pokud proběhla v pořádku, jinak 0.
+ */
+int remove_substr(char *str, const char *substr);
+
+/**
  * \brief Struktura pro reprezentaci prvku v reverzní polské notaci.
  * Prvek může být číslo, proměnná nebo operátor.
  * 'd' - number, 'v' - variable, '1' - operator level 1 , '2' - operator level 2, 'l' - left bracket, 'r' - right bracket
@@ -120,7 +136,7 @@ struct evaluation_expression *multiply_evaluation_expressions(struct evaluation_
  * \param expr2 Druhý výraz.
  * \return struct evaluation_expression* Ukazatel na nově vytvořený výraz.
  */
-struct evaluation_expresion *sub_evaluation_expressions(struct evaluation_expression *expr1, struct evaluation_expression *expr2);
+struct evaluation_expression *sub_evaluation_expressions(struct evaluation_expression *expr1, struct evaluation_expression *expr2);
 
 /**
  * \brief Funkce vydělí dva výrazy, vrátí nový výraz.
@@ -159,10 +175,9 @@ int amend_multiplication_stars(char *str, const struct vector *allowed_variables
 /**
  * \brief Funkce provede převod infixový výraz na reverzní polskou notaci pomocí Shunting Yard algoritmu.
  * \param str Ukazatel na řetězec, který bude převeden na RPN.
- * \param allowed_variables Ukazatel na vektor povolených proměnných.
  * \return struct queue* Ukazatel na frontu s RPN výrazem.
  */
-struct queue *parse_to_rpn(const char *str, const struct vector *allowed_variables);
+struct queue *parse_to_rpn(const char *str);
 
 /**
  * \brief Funkce provede vyhodnocení RPN výrazu.
