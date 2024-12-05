@@ -27,6 +27,22 @@ int strlencmp(const char *str1, const char *str2);
 int remove_substr(char *str, const char *substr);
 
 /**
+ * \brief Funkce nahradí všechny výskyty podřetězce za jiný podřetězec.
+ * \param str Řetězec.
+ * \param substr Podřetězec.
+ * \param replacement Nahrazující podřetězec.
+ * \return int 1, pokud proběhla v pořádku, jinak 0.
+ */
+int replace_substr(char *str, const char *substr, const char *replacement);
+
+/**
+ * \brief Seřadí pole stringů podle délky sesestupně.
+ * \param *str  Pole řetězce.
+ * \param count Počet řetězců v poli.
+ */
+void sort_str_by_len(char *str, size_t count);
+
+/**
  * \brief Struktura pro reprezentaci prvku v reverzní polské notaci.
  * Prvek může být číslo, proměnná nebo operátor.
  * 'd' - number, 'v' - variable, '1' - operator level 1 , '2' - operator level 2, 'l' - left bracket, 'r' - right bracket
@@ -42,110 +58,105 @@ struct rpn_item {
 };
 
 /**
- * \brief Funkce vytvoří nový prvek RPN typu number.
+ * \brief Inicializuje prvek RPN typu number.
  * \param number Hodnota čísla.
  * \return struct rpn_item* Ukazatel na nově vytvořený prvek RPN.
  */
-int rpn_item_create_number(struct rpn_item *rpn_item, mat_num_type number);
+struct rpn_item rpn_item_create_number(mat_num_type number);
 
 /**
- * \brief Funkce vytvoří nový prvek RPN typu variable.
+ * \brief Inicializuje prvek RPN typu variable.
  * \param variable Index proměnné v poli povolených proměnných.
  * \return struct rpn_item* Ukazatel na nově vytvořený prvek RPN.
  */
-int rpn_item_create_variable(struct rpn_item *rpn_item, size_t variable);
+struct rpn_item rpn_item_create_variable(size_t variable);
 
 /**
- * \brief Funkce vytvoří nový prvek RPN typu operator.
+ * \brief Inicializuje prvek RPN typu operator.
  * \param operator Operátor.
  * \return struct rpn_item* Ukazatel na nově vytvořený prvek RPN.
  */
-int rpn_item_create_operator_first_level(struct rpn_item *rpn_item, char operator);
+struct rpn_item rpn_item_create_operator_first_level(char operator);
 
 /**
- * \brief Funkce vytvoří nový prvek RPN typu operator.
+ * \brief Inicializuje prvek RPN typu operator.
  * \param operator Operátor.
  * \return struct rpn_item* Ukazatel na nově vytvořený prvek RPN.
  */
-int rpn_item_create_operator_second_level(struct rpn_item *rpn_item, char operator);
+struct rpn_item rpn_item_create_operator_second_level(char operator);
 
 /**
- * \brief Funkce vytvoří nový prvek RPN typu operator.
+ * \brief Inicializuje prvek RPN typu operator.
  * \param bracket Závorka.
  * \return struct rpn_item* Ukazatel na nově vytvořený prvek RPN.
  */
-int rpn_item_create_bracket(struct rpn_item *rpn_item, char bracket);
+struct rpn_item rpn_item_create_bracket(char bracket);
+
+#define MAX_VAR_COUNT 10
 
 /**
  * \brief Struktura pro vyhodnocení výrazu.
  * Obsahuje konstantu a koeficienty proměnných.
  * Lze sčítat, odčítat, násobit a dělit.
+ * Násobení a dělení pouze konstantou !!!!!!
  */
 struct evaluation_expression {
     mat_num_type constant;
-    mat_num_type *var_koeficients;
+    mat_num_type var_koeficients[MAX_VAR_COUNT];
     size_t var_count;
 };
 
-
 /**
- * \brief Funkce provede alokaci nového výrazu pro vyhodnocení.
+ * \brief Funkce provede inicializaci výrazu pro vyhodnocení typu konstanta.  
  * \param var_count Počet proměnných výrazu.
  * \param constant Konstanta výrazu.
- * \return struct evaluation_expression* Ukazatel na nově alokovaný výraz.
+ * \return struct evaluation_expression Výraz
  */
-struct evaluation_expression *create_evaluation_expression_constant(const size_t var_count, const mat_num_type constant);
+struct evaluation_expression create_evaluation_expression_constant(const mat_num_type constant);
 
 /**
- * \brief Funkce provede alokaci nového výrazu pro vyhodnocení.
+ * \brief Funkce provede inicializaci výrazu pro vyhodnocení typu proměnná.
  * \param var_count Počet proměnných výrazu.
  * \param variable_index Index proměnné v poli povolených proměnných.
- * \return struct evaluation_expression* Ukazatel na nově alokovaný výraz.
+ * \return struct evaluation_expression Výraz.
  */
-struct evaluation_expression *create_evaluation_expression_variable(const size_t var_count, const size_t variable_index);
+struct evaluation_expression create_evaluation_expression_variable(const size_t var_count, const size_t variable_index);
 
 /**
- * \brief Funkce uvolní alokovaný výraz.
- * \param expr Ukazatel na ukazatel na uvolňovaný výraz.
+ * \brief Funkce sečte dva výrazy, vrátí nov.
+ * \param expr1 První výraz.
+ * \param expr2 Druhý výraz.
+ * \return struct evaluation_expression Výsledná výraz.
  */
-void free_evaluation_expression(struct evaluation_expression **expr);
-
-/**
- * \brief Funkce sečte dva výrazy, vrátí nový výraz.
- * \param var_count Počet proměnných výrazu.
- * \param constant Konstanta výrazu.
- * \param variable_index Index proměnné v poli povolených proměnných.
- * \return struct evaluation_expression* Ukazatel na nově alokovaný výraz.
- */
-struct evaluation_expression *add_evaluation_expressions(struct evaluation_expression *expr1, struct evaluation_expression *expr2);
+struct evaluation_expression add_evaluation_expressions(struct evaluation_expression expr1, struct evaluation_expression expr2);
 
 
 /**
- * \brief Funkce vynásobí dva výrazy, vrátí nový výraz.
+ * \brief Funkce vynásobí dva výrazy.
  * Funkce předpokládá, že druhý výraz je pouze konstanta !!!
  * \param expr1 První výraz.
  * \param expr2 Druhý výraz.
- * \return struct evaluation_expression* Ukazatel na nově vytvořený výraz.
+ * \return struct evaluation_expression Výsledný výraz.
  */
-struct evaluation_expression *multiply_evaluation_expressions(struct evaluation_expression *expr1, struct evaluation_expression *expr2);
+struct evaluation_expression multiply_evaluation_expressions(struct evaluation_expression expr1, struct evaluation_expression expr2);
 
 
 /**
- * \brief Funkce odečte dva výrazy, vrátí nový výraz.
+ * \brief Funkce odečte dva výrazy.
  * \param expr1 První výraz.
  * \param expr2 Druhý výraz.
- * \return struct evaluation_expression* Ukazatel na nově vytvořený výraz.
+ * \return struct evaluation_expression Výsledný výraz.
  */
-struct evaluation_expression *sub_evaluation_expressions(struct evaluation_expression *expr1, struct evaluation_expression *expr2);
+struct evaluation_expression sub_evaluation_expressions(struct evaluation_expression expr1, struct evaluation_expression expr2);
 
 /**
  * \brief Funkce vydělí dva výrazy, vrátí nový výraz.
  * Funkce předpokládá, že druhý výraz je pouze konstanta !!!
  * \param expr1 První výraz.
  * \param expr2 Druhý výraz.
- * \return struct evaluation_expression* Ukazatel na nově vytvořený výraz.
+ * \return struct evaluation_expression Výsledný výraz.
  */
-struct evaluation_expression *divide_evaluation_expressions(struct evaluation_expression *expr1, struct evaluation_expression *expr2);
+struct evaluation_expression divide_evaluation_expressions(struct evaluation_expression expr1, struct evaluation_expression expr2);
 
 /**
  * \brief Funkce provede kontrolu syntaxe závorek v zadaném řetězci.
@@ -182,8 +193,8 @@ struct queue *parse_to_rpn(const char *str);
 /**
  * \brief Funkce provede vyhodnocení RPN výrazu.
  * \param rpn Ukazatel na frontu s RPN výrazem.
- * \return evaluation_expression* Ukazatel na výsledek vyhodnocení.
+ * \return evaluation_expression Výsledek vyhodnocení.
  */
-struct evaluation_expression *rpn_evaluate(const struct queue *rpn);
+struct evaluation_expression rpn_evaluate(struct queue *rpn, const size_t var_count);
 
 #endif

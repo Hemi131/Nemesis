@@ -172,180 +172,158 @@ int change_brackets(char *str) {
     return 1;
 } */
 
-int rpn_item_create_number(struct rpn_item *rpn_item, mat_num_type number) {
+struct rpn_item rpn_item_create_number(mat_num_type number) {
+    struct rpn_item rpn_item;
 
-    if (!rpn_item) {
-        return 0;
-    }
+    rpn_item.type = 'd';
+    rpn_item.data.number = number;
 
-    rpn_item->type = 'd';
-    rpn_item->data.number = number;
-
-    return 1;
+    return rpn_item;
 }
 
-int rpn_item_create_variable(struct rpn_item *rpn_item, size_t variable) {
+struct rpn_item rpn_item_create_variable(size_t variable) {
+    struct rpn_item rpn_item;
 
-    if (!rpn_item) {
-        return 0;
-    }
+    rpn_item.type = 'v';
+    rpn_item.data.variable = variable;
 
-    rpn_item->type = 'v';
-    rpn_item->data.variable = variable;
-
-    return 1;
+    return rpn_item;
 }
 
-int rpn_item_create_operator_first_level(struct rpn_item *rpn_item, char operator) {
+struct rpn_item rpn_item_create_operator_first_level(char operator) {
+    struct rpn_item rpn_item;
 
-    if (!rpn_item) {
-        return 0;
-    }
+    rpn_item.type = '1';
+    rpn_item.data.operator = operator;
 
-    rpn_item->type = '1';
-    rpn_item->data.operator = operator;
-
-    return 1;
+    return rpn_item;
 }
 
-int rpn_item_create_operator_second_level(struct rpn_item *rpn_item, char operator) {
+struct rpn_item rpn_item_create_operator_second_level(char operator) {
+    struct rpn_item rpn_item;
 
-    if (!rpn_item) {
-        return 0;
-    }
+    rpn_item.type = '2';
+    rpn_item.data.operator = operator;
 
-    rpn_item->type = '2';
-    rpn_item->data.operator = operator;
-
-    return 1;
+    return rpn_item;
 }
 
-int rpn_item_create_bracket(struct rpn_item *rpn_item, char bracket) {
+struct rpn_item rpn_item_create_bracket(char bracket) {
+    struct rpn_item rpn_item;
 
-    if (!rpn_item) {
-        return 0;
-    }
+    rpn_item.type = 'b';
+    rpn_item.data.bracket = bracket;
 
-    rpn_item->type = 'b';
-    rpn_item->data.bracket = bracket;
-
-    return 1;
+    return rpn_item;
 }
 
-struct evaluation_expression *create_evaluation_expression_constant(const size_t var_count, const mat_num_type constant) {
-    struct evaluation_expression *new = malloc(sizeof(*new));
+struct evaluation_expression create_evaluation_expression_constant(const mat_num_type constant) {
+    struct evaluation_expression new_expr = {0};
 
-    if (!new) {
-        return NULL;
-    }
+    new_expr.constant = constant;
+    new_expr.var_count = 0;
 
-    new->constant = constant;
-    new->var_count = var_count;
-    new->var_koeficients = malloc(var_count * sizeof(mat_num_type));
-
-    return new;
+    return new_expr;
 }
 
-struct evaluation_expression *create_evaluation_expression_variable(const size_t var_count, const size_t variable_index) {
-    struct evaluation_expression *new = malloc(sizeof(*new));
+struct evaluation_expression create_evaluation_expression_variable(const size_t var_count, const size_t variable_index) {
+    struct evaluation_expression new_expr = {0};
 
-    if (!new) {
-        return NULL;
-    }
+    new_expr.constant = 0.0;
+    new_expr.var_count = var_count;
+    new_expr.var_koeficients[variable_index] = 1.0;
 
-    new->constant = 0.0;
-    new->var_count = var_count;
-    new->var_koeficients = malloc(var_count * sizeof(mat_num_type));
-    new->var_koeficients[variable_index] = 1.0;
-
-    return new;
+    return new_expr;
 }
 
-void free_evaluation_expression(struct evaluation_expression **expr) {
-    if (!expr || !*expr) {
-        return;
-    }
-
-    free((*expr)->var_koeficients);
-    free(*expr);
-    *expr = NULL;
-}
-
-struct evaluation_expression *add_evaluation_expressions(struct evaluation_expression *expr1, struct evaluation_expression *expr2) {
+struct evaluation_expression add_evaluation_expressions(struct evaluation_expression expr1, struct evaluation_expression expr2) {
     size_t i;
-    struct evaluation_expression *new = malloc(sizeof(*new));
+    struct evaluation_expression new_expr = {0};
 
-    if (!new) {
-        return NULL;
+    new_expr.constant = expr1.constant + expr2.constant;
+
+    if (expr1.var_count || expr2.var_count) {
+        new_expr.var_count = expr1.var_count > expr2.var_count ? expr1.var_count : expr2.var_count;
+        for (i = 0; i < new_expr.var_count; ++i) {
+            new_expr.var_koeficients[i] = expr1.var_koeficients[i] + expr2.var_koeficients[i];
+        }
     }
 
-    new->constant = expr1->constant + expr2->constant;
-    new->var_count = expr1->var_count;
-    new->var_koeficients = malloc(new->var_count * sizeof(mat_num_type));
-
-    for (i = 0; i < new->var_count; ++i) {
-        new->var_koeficients[i] = expr1->var_koeficients[i] + expr2->var_koeficients[i];
-    }
-
-    return new;
+    return new_expr;
     
 }
 
-struct evaluation_expression *multiply_evaluation_expressions(struct evaluation_expression *expr1, struct evaluation_expression *expr2) {
+struct evaluation_expression multiply_evaluation_expressions(struct evaluation_expression expr1, struct evaluation_expression expr2) {
     size_t i;
-    struct evaluation_expression *new = malloc(sizeof(*new));
+    struct evaluation_expression new_expr = {0};
 
-    if (!new) {
-        return NULL;
+    new_expr.constant = expr1.constant * expr2.constant;
+
+    if (!expr1.var_count && !expr2.var_count) {
+        return new_expr;
     }
-
-    new->constant = expr1->constant * expr2->constant;
-    new->var_count = expr1->var_count;
-    new->var_koeficients = malloc(new->var_count * sizeof(mat_num_type));
-
-    for (i = 0; i < new->var_count; ++i) {
-        new->var_koeficients[i] = expr1->var_koeficients[i] * expr2->constant;
+    else if (expr1.var_count && !expr2.var_count) {
+        new_expr.var_count = expr1.var_count > expr2.var_count ? expr1.var_count : expr2.var_count;
+        for (i = 0; i < new_expr.var_count; ++i) {
+            new_expr.var_koeficients[i] = expr1.var_koeficients[i] * expr2.constant;
+        }
     }
-
-    return new;
+    else if (!expr1.var_count && expr2.var_count) {
+        new_expr.var_count = expr1.var_count > expr2.var_count ? expr1.var_count : expr2.var_count;
+        for (i = 0; i < new_expr.var_count; ++i) {
+            new_expr.var_koeficients[i] = expr2.var_koeficients[i] * expr1.constant;
+        }
+    }
+    else
+    {
+        printf("Error: multiplication of two variables is not supported\n"); /* #TODO: error handling */
+    }
+    
+    return new_expr;
 }
 
-struct evaluation_expression *sub_evaluation_expressions(struct evaluation_expression *expr1, struct evaluation_expression *expr2) {
+struct evaluation_expression sub_evaluation_expressions(struct evaluation_expression expr1, struct evaluation_expression expr2) {
     size_t i;
-    struct evaluation_expression *new = malloc(sizeof(*new));
+    struct evaluation_expression new_expr = {0};
 
-    if (!new) {
-        return NULL;
+    new_expr.constant = expr1.constant - expr2.constant;
+
+    if (expr1.var_count || expr2.var_count) {
+        new_expr.var_count = expr1.var_count > expr2.var_count ? expr1.var_count : expr2.var_count;
+        for (i = 0; i < new_expr.var_count; ++i) {
+            new_expr.var_koeficients[i] = expr1.var_koeficients[i] - expr2.var_koeficients[i];
+        }
     }
 
-    new->constant = expr1->constant - expr2->constant;
-    new->var_count = expr1->var_count;
-    new->var_koeficients = malloc(new->var_count * sizeof(mat_num_type));
-
-    for (i = 0; i < new->var_count; ++i) {
-        new->var_koeficients[i] = expr1->var_koeficients[i] - expr2->var_koeficients[i];
-    }
-
-    return new;
+    return new_expr;
 }
 
-struct evaluation_expression *divide_evaluation_expressions(struct evaluation_expression *expr1, struct evaluation_expression *expr2) {
+struct evaluation_expression divide_evaluation_expressions(struct evaluation_expression expr1, struct evaluation_expression expr2) {
     size_t i;
-    struct evaluation_expression *new = malloc(sizeof(*new));
+    struct evaluation_expression new_expr = {0};
 
-    if (!new) {
-        return NULL;
+    if (expr2.var_count) {
+        printf("Error: division by variable is not supported.\n");
+        exit(EXIT_FAILURE); /* TODO: error handling */
+        return new_expr;
     }
 
-    new->constant = expr1->constant / expr2->constant;
-    new->var_count = expr1->var_count;
-    new->var_koeficients = malloc(new->var_count * sizeof(mat_num_type));
-
-    for (i = 0; i < new->var_count; ++i) {
-        new->var_koeficients[i] = expr1->var_koeficients[i] / expr2->constant;
+    if (expr2.constant == 0) {
+        printf("Error: division by zero\n");
+        exit(EXIT_FAILURE); /* TODO: error handling */
+        return new_expr;
     }
 
-    return new;
+    new_expr.constant = expr1.constant / expr2.constant;
+
+    if (expr1.var_count) {
+        new_expr.var_count = expr1.var_count;
+        for (i = 0; i < new_expr.var_count; ++i) {
+            new_expr.var_koeficients[i] = expr1.var_koeficients[i] / expr2.constant;
+        }
+    }
+    
+    return new_expr;
 }
 
 struct queue *parse_to_rpn(const char *str) {
@@ -353,21 +331,16 @@ struct queue *parse_to_rpn(const char *str) {
     struct queue *q;
 
     int i, j, var_index;
-    int last_was_number = 0;
 
     double number;
 
     char *endptr;
 
-    struct rpn_item rpn_item;
+    struct rpn_item rpn_item, last_rpn_item;
 
     char *buffer = malloc((MAX_EXPRESSION_LENGTH + 1) * sizeof(char));
 
-    if (!str) {
-        return NULL;
-    }
-
-    if(!buffer) {
+    if (!str || !buffer) {
         return NULL;
     }
 
@@ -383,28 +356,26 @@ struct queue *parse_to_rpn(const char *str) {
         return NULL;
     }
 
+    last_rpn_item.type = '0';
     for (i = 0; str[i] != '\0'; ++i) {
         switch (str[i]) {
-            case '(': /* TODO: nekontroluju takovou tu matematickou konvenci s pořadím závorek {[()]} */
-                if (last_was_number) {
-                    if (!rpn_item_create_operator_second_level(&rpn_item, '*')) {
-                        goto failed;
-                    }
+            case '(':
+                if (last_rpn_item.type == 'd' || (last_rpn_item.type == 'b' && last_rpn_item.data.bracket == ')')) {
+
+                    rpn_item = rpn_item_create_operator_second_level('*');
 
                     if (!stack_push(s, &rpn_item)) {
                         goto stack_failed;
                     }
                 }
 
-                if (!rpn_item_create_bracket(&rpn_item, '(')) {
-                    goto failed;
-                }
+                rpn_item = rpn_item_create_bracket('(');
 
                 if (!stack_push(s, &rpn_item)) {
                     goto stack_failed;
                 }
 
-                last_was_number = 0;
+                last_rpn_item = rpn_item;
                 break;
             case ')':
                 while (stack_pop(s, &rpn_item) && rpn_item.type != 'b') {
@@ -413,7 +384,7 @@ struct queue *parse_to_rpn(const char *str) {
                     }
                 }
 
-                last_was_number = 0;
+                last_rpn_item = rpn_item_create_bracket(')');
                 break;
             case '+':
             case '-':
@@ -425,41 +396,35 @@ struct queue *parse_to_rpn(const char *str) {
                         goto queue_failed;
                     }
                 }
-                if (!rpn_item_create_operator_first_level(&rpn_item, str[i])) {
-                    goto failed;
-                }
+
+                rpn_item = rpn_item_create_operator_first_level(str[i]);
 
                 if (!stack_push(s, &rpn_item)) {
                     goto stack_failed;
                 }
 
-                last_was_number = 0;
+                last_rpn_item = rpn_item;
                 break;
             case '*':
             case '/':
-                if (!rpn_item_create_operator_second_level(&rpn_item, str[i])) {
-                    goto failed;
-                }
+                rpn_item = rpn_item_create_operator_second_level(str[i]);
         
                 if (!stack_push(s, &rpn_item)) {
                     goto stack_failed;
                 }
 
-                last_was_number = 0;
+                last_rpn_item = rpn_item;
                 break;
-            case '@':
-                if (last_was_number) {
-
-                    if (!rpn_item_create_operator_second_level(&rpn_item, '*')) {
-                        goto failed;
-                    }
+            case '{':
+                if (last_rpn_item.type == 'd') {
+                    rpn_item = rpn_item_create_operator_second_level('*');
 
                     if (!stack_push(s, &rpn_item)) {
                         goto stack_failed;
                     }
                 }
 
-                for (j = 1; str[i + j] != '@'; ++j) {
+                for (j = 1; str[i + j] != '}'; ++j) {
                     buffer[j - 1] = str[i + j];
                 }
                 buffer[j - 1] = '\0';
@@ -469,15 +434,13 @@ struct queue *parse_to_rpn(const char *str) {
                     goto wrong_number;
                 }
 
-                if (!rpn_item_create_variable(&rpn_item, var_index)) {
-                    goto failed;
-                }
+                rpn_item = rpn_item_create_variable(var_index);
 
                 if (!queue_enqueue(q, &rpn_item)) {
                     goto queue_failed;
                 }
 
-                last_was_number = 0;
+                last_rpn_item = rpn_item;
                 i += j;
                 break;
             default:
@@ -497,15 +460,13 @@ struct queue *parse_to_rpn(const char *str) {
                     goto wrong_number;
                 }
 
-                if (!rpn_item_create_number(&rpn_item, number)) {
-                    goto failed;
-                }
+                rpn_item = rpn_item_create_number(number);
 
                 if (!queue_enqueue(q, &rpn_item)) {
                     goto queue_failed;
                 }
 
-                last_was_number = 1;
+                last_rpn_item = rpn_item;
                 i += j - 1;
                 break; 
         }
@@ -521,12 +482,13 @@ struct queue *parse_to_rpn(const char *str) {
 
 stack_failed:
     printf("stack failed\n");
-failed:
-    printf("failed\n");
+    goto end;
 wrong_number:
     printf("wrong number\n");
+    goto end;
 queue_failed:
     printf("queue failed\n");
+    goto end;
 bad_character:
     printf("bad character\n");
 end:
@@ -536,7 +498,83 @@ end:
     return q;
 }
 
-/* struct evaluation_expression *rpn_evaluate(const struct queue *rpn) {
-     TODO: 
-    return NULL;
-} */
+struct evaluation_expression rpn_evaluate(struct queue *rpn, const size_t var_count) {
+    struct  stack *s;
+
+    struct rpn_item rpn_item;
+    struct evaluation_expression expr1, expr2, result;
+
+    if (!rpn) {
+        printf("Error: invalid RPN\n"); /* #TODO: error handling */
+        return create_evaluation_expression_constant(0.0);
+    }
+    
+    s = stack_alloc(queue_item_count(rpn), sizeof(struct evaluation_expression));
+
+    if (!s) {
+        printf("Error: stack allocation failed\n"); /* #TODO: error handling */
+        return create_evaluation_expression_constant(0.0);
+    }
+
+    while (queue_dequeue(rpn, &rpn_item)) {
+        switch (rpn_item.type) {
+            case 'd':
+            case 'v':
+                if (rpn_item.type == 'v') {
+                    expr1 = create_evaluation_expression_variable(var_count, rpn_item.data.variable);
+                }
+                else {
+                    expr1 = create_evaluation_expression_constant(rpn_item.data.number);
+                }
+
+                if (!stack_push(s, &expr1)) {
+                    printf("Error: stack push failed\n"); /* #TODO: error handling */
+                    return create_evaluation_expression_constant(0.0);
+                }
+                break;
+            case '1':
+            case '2':
+                if (!stack_pop(s, &expr2) || !stack_pop(s, &expr1)) {
+                    printf("Error: invalid RPN\n"); /* #TODO: error handling */
+                    return create_evaluation_expression_constant(0.0);
+                }
+
+                if (rpn_item.data.operator == '+') {
+                    result = add_evaluation_expressions(expr1, expr2);
+                }
+                else if (rpn_item.data.operator == '-') {
+                    result = sub_evaluation_expressions(expr1, expr2);
+                }
+                else if (rpn_item.data.operator == '*') {
+                    result = multiply_evaluation_expressions(expr1, expr2);
+                }
+                else if (rpn_item.data.operator == '/') {
+                    result = divide_evaluation_expressions(expr1, expr2);
+                }
+                else {
+                    printf("Error: invalid RPN\n"); /* #TODO: error handling  bylo tam neco jinyho nez + nebo - nebo * nebo / */
+                    return create_evaluation_expression_constant(0.0);
+                }
+
+                if (!stack_push(s, &result)) {
+                    printf("Error: stack push failed\n"); /* #TODO: error handling */
+                    return create_evaluation_expression_constant(0.0);
+                }
+                break;
+            default:
+                printf("Error: spatny operator type\n"); /* #TODO: error handling */
+                return create_evaluation_expression_constant(0.0);
+        }
+
+
+    }
+
+    if (!stack_pop(s, &result) || stack_item_count(s) != 0) {
+        printf("Error: invalid RPN\n"); /* #TODO: error handling */
+        return create_evaluation_expression_constant(0.0);
+    }
+
+    stack_dealloc(&s); /* TODO: nezapomenout na stack dealloc pri chybe */
+
+    return result;
+}
