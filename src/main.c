@@ -5,7 +5,7 @@
 #include "parser.h"
 #include "queue.h"
 
-int main() {
+int main1() {
     /* printf("Hello, World!\n"); */
     char *str = malloc(100 * sizeof(char));
     struct queue *q;
@@ -50,6 +50,30 @@ int main() {
 
     queue_dealloc(&q);
     free(str);
+
     return 0;
 }
 
+void print_array(char *arr[], size_t n) {
+    size_t i;
+    for (i = 0; i < n; ++i) {
+        printf("%s\n", arr[i]);
+    }
+}
+
+int main() {
+    char str[100] = "3x_1+ 2 * x_11";
+    const char *vars[] = {"x_1", "x_11"};
+    size_t vars_count = 2;
+
+    if (!prepare_expression(str, vars, vars_count)) {
+        printf("Failed to prepare expression\n");
+    }
+    else {
+        printf("Prepared expression: \"%s\"\n", str);
+    }
+
+
+
+    return 0;
+}

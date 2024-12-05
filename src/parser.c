@@ -6,26 +6,13 @@
 
 #include <stdio.h>
 
-int strlencmp(const char *str1, const char *str2) {
-    size_t len1 = strlen(str1);
-    size_t len2 = strlen(str2);
-
-    if (len1 < len2) {
-        return -1;
-    } else if (len1 > len2) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
 int remove_substr(char *str, const char *substr) {
     char *pos, *temp;
     size_t len = strlen(substr);
 
     temp = malloc(strlen(str) + 1);
     if (!temp) {
-        return EXIT_FAILURE;
+        return 0;
     }
 
     while ((pos = strstr(str, substr)) != NULL) {
@@ -38,7 +25,104 @@ int remove_substr(char *str, const char *substr) {
     }
 
     free(temp);
+    return 1;
+}
+
+int check_valid_chars(const char *str) {
+    size_t i;
+
+    for (i = 0; str[i] != '\0'; ++i) {
+        if (!((str[i] >= '0' && str[i] <= '9') || str[i] == '+' || str[i] == '-' || str[i] == '*' || str[i] == '/' || str[i] == '(' || str[i] == ')' || str[i] == '{' || str[i] == '}')) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+int replace_substr(char *str, const char *substr, const char *replacement) {
+    char *pos, *temp;
+    size_t len = strlen(substr);
+
+    temp = malloc(strlen(str) + 1);
+    if (!temp) {
+        return EXIT_FAILURE;
+    }
+
+    while ((pos = strstr(str, substr)) != NULL) {
+        strncpy(temp, str, pos - str);
+        temp[pos - str] = '\0';
+
+        strcat(temp, replacement);
+        strcat(temp, pos + len);
+
+        strcpy(str, temp);
+    }
+
+    free(temp);
     return EXIT_SUCCESS;
+}
+
+void sort_str_by_len(char *arr[], size_t n) {
+    size_t i, j;
+
+    for (i = 0; i < n - 1; ++i) {
+        for (j = 0; j < n - i - 1; ++j) {
+            if (strlen(arr[j]) < strlen(arr[j + 1])) {
+                char *temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+        }
+    }
+}
+
+void replace_vars_by_index(char *str, const char **vars, const size_t vars_count) {
+    size_t i, j;
+    char buffer[25];
+    char **vars_sorted;
+
+    vars_sorted = malloc(vars_count * sizeof(char *));
+    if (!vars_sorted) {
+        return;
+    }
+    memcpy(vars_sorted, vars, vars_count * sizeof(char *));
+    sort_str_by_len(vars_sorted, vars_count);
+
+    for (i = 0; i < vars_count; ++i) {
+        for (j = 0; j < vars_count; ++j) {
+            if (strcmp(vars[j], vars_sorted[i]) == 0) {
+                break;
+            }
+        }
+
+        sprintf(buffer, "{%lu}", j);
+        replace_substr(str, vars_sorted[i], buffer);
+    }
+
+    free(vars_sorted);
+}
+
+int prepare_expression(char *str, const char **vars, const size_t vars_count) {
+    if (!check_brackets(str)) {
+        return 0;
+    }
+
+    if(!change_brackets(str)) {
+        return 0;
+    }
+
+    replace_vars_by_index(str, vars, vars_count);
+
+    if (!remove_substr(str, " ")) {
+        return 0;
+    }
+
+    if (!check_valid_chars(str)) {
+        return 0;
+    }
+
+    return 1;
 }
 
 int check_brackets(const char *str) {
@@ -125,52 +209,6 @@ int change_brackets(char *str) {
 
     return 1;
 }
-
-/* int amend_multiplication_stars(char *str, const struct vector *allowed_variables) {  TODO: vyřadit 
-    size_t i, j, offset;
-    char *new_str = malloc((MAX_EXPRESSION_LENGTH + 1) * sizeof(char));
-
-    if (!new_str) {
-        return 0;
-    }
-
-    offset = 0;
-    for (i = 0; str[i] != '\0'; ++i) {
-        new_str[i + offset] = str[i];
-
-        if (i + 1 < MAX_EXPRESSION_LENGTH && str[i] >= '0' && str[i] <= '9' && str[i+1] < '0' && str[i+1] > '9') {
-            if (str[i + 1] == '(') {
-                offset++;
-                new_str[i + offset] = '*';
-            }
-            else {
-                for (j = 0; j < vector_count(allowed_variables); ++j) {
-                    if (str[i + 1] == *(char *)vector_at(allowed_variables, j)) {
-
-
-                        offset++;
-                        new_str[i + offset] = '*';
-                        break;
-                    }
-                }
-            }
-            
-        }
-
-        if (i + offset >= MAX_EXPRESSION_LENGTH) {
-            free(new_str);
-            return 0;
-        }
-    }
-
-    new_str[i] = '\0';
-
-    strcpy(str, new_str);
-
-    free(new_str);
-
-    return 1;
-} */
 
 struct rpn_item rpn_item_create_number(mat_num_type number) {
     struct rpn_item rpn_item;
@@ -354,6 +392,14 @@ struct queue *parse_to_rpn(const char *str) {
     if (!q) {
         stack_dealloc(&s);
         return NULL;
+    }
+
+    if (strlen(str) > 1 && (str[0] == '+' || str[0] == '-')) {
+        rpn_item = rpn_item_create_number(0.0);
+
+        if (!queue_enqueue(q, &rpn_item)) {
+            goto queue_failed;
+        }
     }
 
     last_rpn_item.type = '0';

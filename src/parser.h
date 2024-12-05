@@ -3,20 +3,11 @@
 #include "matrix.h"
 #include "stack.h"
 #include "queue.h"
-#include "vector.h"
 
 #ifndef PARSER_H
 #define PARSER_H
 
 #include <stddef.h>
-
-/**
- * \brief Funkce porovnává délky dvou řetězců.
- * \param str1 První řetězec.
- * \param str2 Druhý řetězec.
- * \return int -1, pokud je první řetězec kratší, 0 pokud jsou stejně dlouhé, 1 pokud je první řetězec delší.
- */
-int strlencmp(const char *str1, const char *str2);
 
 /**
  * \brief Funkce odstraní všechny výskyty podřetězce ze zadaného řetězce.
@@ -25,6 +16,13 @@ int strlencmp(const char *str1, const char *str2);
  * \return int 1, pokud proběhla v pořádku, jinak 0.
  */
 int remove_substr(char *str, const char *substr);
+
+/**
+ * \brief Funkce zkontroluje validitu znaků v řetězci.
+ * \param str Řetězec.
+ * \return int 1, pokud je validní, jinak 0.
+ */
+int check_valid_chars(const char *str);
 
 /**
  * \brief Funkce nahradí všechny výskyty podřetězce za jiný podřetězec.
@@ -40,7 +38,20 @@ int replace_substr(char *str, const char *substr, const char *replacement);
  * \param *str  Pole řetězce.
  * \param count Počet řetězců v poli.
  */
-void sort_str_by_len(char *str, size_t count);
+void sort_str_by_len(char **str, size_t count);
+
+/**
+ * \brief Funkce vymění název proměnné za její index v poli povolených proměnných.
+ * \param str Řetězec.
+ */
+void replace_vars_by_index(char *str, const char **vars, const size_t vars_count);
+
+/**
+ * \brief Funkce zkontroluje a přípraví výraz k parsování do RPN.
+ * \param str Řetězec.
+ * \return int 1, pokud je správně a připraven, jinak 0.
+ */
+int prepare_expression(char *str, const char **vars, const size_t vars_count);
 
 /**
  * \brief Struktura pro reprezentaci prvku v reverzní polské notaci.
@@ -174,14 +185,6 @@ int check_brackets(const char *str);
  * \return char* Ukazatel na nově vytvořený řetězec s novými závorkami.
  */
 int change_brackets(char *str);
-
-/**
- * \brief Funkce doplní '*' mezi číslo a proměnnou, mezi závorku a proměnnou, mezi číslo a závorku.
- * \param str Ukazatel na řetězec, ve kterém přidány '*'.
- * \param allowed_variables Ukazatel na vektor povolených proměnných.
- * \return int 1, pokud se akce provedla, jinak 0.
- */
-int amend_multiplication_stars(char *str, const struct vector *allowed_variables);
 
 /**
  * \brief Funkce provede převod infixový výraz na reverzní polskou notaci pomocí Shunting Yard algoritmu.
