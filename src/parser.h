@@ -33,6 +33,7 @@ int check_valid_chars(const char *str);
  */
 int replace_substr(char *str, const char *substr, const char *replacement);
 
+int replace_substr_with_end(char *str, const char *substr);
 /**
  * \brief Seřadí pole stringů podle délky sesestupně.
  * \param *str  Pole řetězce.

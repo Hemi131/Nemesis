@@ -63,6 +63,17 @@ int replace_substr(char *str, const char *substr, const char *replacement) {
     return EXIT_SUCCESS;
 }
 
+int replace_substr_with_end(char *str, const char *substr) {
+    char *pos;
+
+    pos = strstr(str, substr);
+    if (pos != NULL) {
+        pos[0] = '\0';
+    }
+
+    return EXIT_SUCCESS;
+}
+
 void sort_str_by_len(char *arr[], size_t n) {
     size_t i, j;
 

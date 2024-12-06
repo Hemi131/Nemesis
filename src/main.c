@@ -61,7 +61,7 @@ void print_array(char *arr[], size_t n) {
     }
 }
 
-int main() {
+int main2() {
     char str[100] = "3x_1+ 2 * x_11";
     const char *vars[] = {"x_1", "x_11"};
     size_t vars_count = 2;
@@ -73,7 +73,109 @@ int main() {
         printf("Prepared expression: \"%s\"\n", str);
     }
 
+    return 0;
+}
 
+int main() {
+    #define MAX_CHARS 256
+    #define MAX_LINES 20
+
+    FILE *file;
+    char buffer[MAX_CHARS];
+    char purpose[MAX_CHARS] = "";
+    char subject[MAX_LINES][MAX_CHARS];
+    char bounds[MAX_LINES][MAX_CHARS];
+    char generals[MAX_CHARS] = "";
+    int subject_count = 0;
+    int bounds_count = 0;
+    int found_maximize = 0;
+    int found_minimize = 0;
+    int i;
+
+    file = fopen("../test.lp", "r");
+    if (!file) {
+        printf("Failed to open file\n");
+        return 1;
+    }
+
+    while (fgets(buffer, MAX_CHARS, file)) {
+        if (buffer[0] == '\\' || buffer[0] == '\n') {
+            continue;
+        }
+    start:
+        if (strstr(buffer, "End")) {
+            break;
+        }
+
+        if (strstr(buffer, "Subject To")) {
+            while (fgets(buffer, MAX_CHARS, file) && !strstr(buffer, "Maximize") && !strstr(buffer, "Minimize")&& !strstr(buffer, "End") && !strstr(buffer, "Generals")&& !strstr(buffer, "Bounds")) {
+                if (buffer[0] == '\\' || buffer[0] == '\n') {
+                    continue;
+                }
+
+                replace_substr_with_end(buffer, "\\");
+                strcpy(subject[subject_count++], buffer);
+            }
+            goto start;
+
+        }
+
+        else if (strstr(buffer, "Maximize")) {
+            found_maximize = 1;
+            fgets(buffer, MAX_CHARS, file);
+            replace_substr_with_end(buffer, "\\");
+            strcpy(purpose, buffer);
+        }
+
+        else if (strstr(buffer, "Minimize")) {
+            found_minimize = 1;
+            fgets(buffer, MAX_CHARS, file);
+            replace_substr_with_end(buffer, "\\");
+            strcpy(purpose, buffer);
+        }
+
+        else if (strstr(buffer, "Generals")) {
+            fgets(buffer, MAX_CHARS, file);
+            replace_substr_with_end(buffer, "\\");
+            strcpy(generals, buffer);
+        }
+
+        else if (strstr(buffer, "Bounds")) {
+            while (fgets(buffer, MAX_CHARS, file) && !strstr(buffer, "Maximize") && !strstr(buffer, "Minimize")&& !strstr(buffer, "End") && !strstr(buffer, "Generals")&& !strstr(buffer, "Subject To")) {
+                if (buffer[0] == '\\' || buffer[0] == '\n') {
+                    continue;
+                }
+                replace_substr_with_end(buffer, "\\");
+                strcpy(bounds[bounds_count++], buffer);
+            }
+            goto start;
+        }
+
+        else {
+            printf("Unknown line: %s\n", buffer);
+        }
+
+    }
+
+    fclose(file);
+
+    if (found_maximize) {
+        printf("Objective: Maximize\n");
+    } else if (found_minimize) {
+        printf("Objective: Minimize\n");
+    } else {
+        printf("Objective: Not found\n");
+    }
+    printf("Purpose: %s\n", purpose);
+    printf("Subject To:\n");
+    for (i = 0; i < subject_count; i++) {
+        printf("%s", subject[i]);
+    }
+    printf("Generals: %s\n", generals);
+    printf("Bounds:\n");
+    for (i = 0; i < bounds_count; i++) {
+        printf("%s", bounds[i]);
+    }
 
     return 0;
 }
