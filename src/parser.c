@@ -32,7 +32,7 @@ int check_valid_chars(const char *str) {
     size_t i;
 
     for (i = 0; str[i] != '\0'; ++i) {
-        if (!((str[i] >= '0' && str[i] <= '9') || str[i] == '+' || str[i] == '-' || str[i] == '*' || str[i] == '/' || str[i] == '(' || str[i] == ')' || str[i] == '{' || str[i] == '}')) {
+        if (!((str[i] >= '0' && str[i] <= '9') || str[i] == '+' || str[i] == '-' || str[i] == '*' || str[i] == '/' || str[i] == '(' || str[i] == ')' || str[i] == '{' || str[i] == '}' || str[i] == '.')) {
             return 0;
         }
     }
@@ -501,7 +501,7 @@ struct queue *parse_to_rpn(const char *str) {
                 i += j;
                 break;
             default:
-                for (j = 0; str[i + j] >= '0' && str[i + j] <= '9'; ++j) {
+                for (j = 0; (str[i + j] >= '0' && str[i + j] <= '9') || str[i + j] == '.'; ++j) {
                     buffer[j] = str[i + j];
                 }
 
