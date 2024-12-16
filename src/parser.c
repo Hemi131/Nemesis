@@ -145,7 +145,6 @@ int check_brackets(const char *str) {
         return 0;
     }
 
-    /* TODO: velikost zásobníku ? */
     s = stack_alloc(strlen(str), sizeof(char));
 
     if (!s) {
@@ -154,7 +153,7 @@ int check_brackets(const char *str) {
 
     for (i = 0; str[i] != '\0'; ++i) {
         switch (str[i]) {
-            case '(': /* TODO: nekontroluju takovou tu matematickou konvenci s pořadím závorek {[()]} */
+            case '(':
             case '{':
             case '[':
                 stack_push(s, &str[i]);
@@ -632,6 +631,7 @@ struct evaluation_expression rpn_evaluate(struct queue *rpn, const size_t var_co
     }
 
     stack_dealloc(&s); /* TODO: nezapomenout na stack dealloc pri chybe */
+    queue_dealloc(&rpn);
 
     return result;
 }

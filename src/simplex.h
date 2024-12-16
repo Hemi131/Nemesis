@@ -39,13 +39,23 @@ int _smallest_col_index(const struct matrix *mat, size_t row);
  * \param col Index sloupce matice.
  * \return size_t Index řádku s nejmenším kvocientem.
  */
-int _smallest_quotient_row_index(const struct matrix *mat, size_t col);
+int _smallest_quotient_row_index(const struct matrix *mat, size_t col, size_t *row_to_optimize);
+
+/**
+ * \brief Funkce provede test optimality.
+ * \param mat Ukazatel na instanci struktury `matrix`, nad kterou bude operace provedena.
+ * \param base_vars Pole indexů bázových proměnných.
+ * \param object_to Pole hodnot cílové funkce.
+ * \param col_to_optimize Ukazatel na index sloupce, který bude optimalizován.
+ * \return int 1, pokud je test optimality splněn, jinak 0.
+ */
+int optimal_max_test(struct matrix *mat, size_t *base_vars, mat_num_type *object_to, size_t *col_to_optimize);
 
 /**
  * \brief Funkce provede maximalizaci simplexové tabulky.
  * \param mat Ukazatel na instanci struktury `matrix`, nad kterou bude operace provedena.
  */
-void simplex_maximize(struct matrix *mat);
+int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object_to, mat_num_type *result, size_t real_vars_count);
 
 /**
  * \brief Funkce provede minimalizaci simplexové tabulky.

@@ -4,6 +4,8 @@
 
 #include "parser.h"
 #include "queue.h"
+#include "matrix.h"
+#include "simplex.h"
 
 int main1() {
     /* printf("Hello, World!\n"); */
@@ -13,7 +15,7 @@ int main1() {
     struct evaluation_expression expr;
     size_t i;
 
-    strcpy(str, "4+18/(9-3)");
+    strcpy(str, "4.1+18/(9-3)");
     q = parse_to_rpn(str);
 
     if (!q) {
@@ -41,14 +43,13 @@ int main1() {
     } */
 
 
-    expr = rpn_evaluate(q, 2);
+    expr = rpn_evaluate(q, 0);
 
     printf("\nResult: %f\n", expr.constant);
     for (i = 0; i < expr.var_count; ++i) {
         printf("var_%lu: %f\n", i, expr.var_koeficients[i]);
     }
 
-    queue_dealloc(&q);
     free(str);
 
     return 0;
@@ -76,7 +77,7 @@ int main2() {
     return 0;
 }
 
-int main() {
+int mainT() {
     #define MAX_CHARS 256
     #define MAX_LINES 20
 
@@ -86,11 +87,19 @@ int main() {
     char subject[MAX_LINES][MAX_CHARS];
     char bounds[MAX_LINES][MAX_CHARS];
     char generals[MAX_CHARS] = "";
-    int subject_count = 0;
-    int bounds_count = 0;
+    size_t subject_count = 0;
+    size_t bounds_count = 0;
     int found_maximize = 0;
     int found_minimize = 0;
-    int i;
+    size_t i;
+
+    struct evaluation_expression expr1, expr2, result, purpose_expr, subject_expr[MAX_LINES], bounds_expr[MAX_LINES];
+    int subject_op[MAX_LINES];
+    int bounds_op[MAX_LINES];
+    char **allowed_vars;
+    size_t allowed_vars_count = 0;
+    char * token;
+
 
     file = fopen("../test.lp", "r");
     if (!file) {
@@ -114,7 +123,8 @@ int main() {
                 }
 
                 replace_substr_with_end(buffer, "\\");
-                strcpy(subject[subject_count++], buffer);
+                strtok(buffer, ":");
+                strcpy(subject[subject_count++], strtok(NULL, ":"));
             }
             goto start;
 
@@ -150,7 +160,7 @@ int main() {
             }
             goto start;
         }
-
+  
         else {
             printf("Unknown line: %s\n", buffer);
         }
@@ -175,6 +185,85 @@ int main() {
     printf("Bounds:\n");
     for (i = 0; i < bounds_count; i++) {
         printf("%s", bounds[i]);
+    }
+
+    if ((found_maximize && found_minimize) || (!found_maximize && !found_minimize)) {
+        printf("Error: Objective not found or multiple objectives found\n");
+        return 1;
+    }
+
+    /* parsing allowed vars */
+    allowed_vars = malloc(MAX_VAR_COUNT * sizeof(char *));
+    for (i = 0; i < MAX_VAR_COUNT; i++) {
+        allowed_vars[i] = malloc(MAX_CHARS * sizeof(char));
+    }
+
+    allowed_vars_count = 0;
+    token = strtok(generals, " ");
+    while (token != NULL) {
+        remove_substr(token, "\n");
+        strcpy(allowed_vars[allowed_vars_count++], token);
+        token = strtok(NULL, " ");
+    }
+
+    printf("Allowed vars:\n");
+    for (i = 0; i < allowed_vars_count; i++) {
+        printf("%s\n", allowed_vars[i]);
+    }
+
+    if (!prepare_expression(purpose, allowed_vars, allowed_vars_count)) {
+        printf("Failed to prepare purpose expression\n");
+        return 1;
+    }
+
+
+    purpose_expr = rpn_evaluate(parse_to_rpn(purpose), allowed_vars_count);
+
+    printf("Purpose expression: %f\n", purpose_expr.constant);
+    for (i = 0; i < purpose_expr.var_count; i++) {
+        printf("var_%lu: %f\n", i, purpose_expr.var_koeficients[i]);
+    }
+
+    
+
+    for (i = 0; i < MAX_VAR_COUNT; ++i) {
+        free(allowed_vars[i]);
+    }
+    free(allowed_vars);
+    return 0;
+}
+
+int main() {
+    struct matrix *mat;
+    size_t basic_vars[] = {2, 3, 5};
+    mat_num_type object_to[] = {6.0, 4.0, 0.0, 0.0, 0.0, -1000.0};
+    mat_num_type result[] = {0.0, 0.0};
+    size_t i, vars_count = 2;
+
+    mat = matrix_allocate(3, 7, 0.0);
+
+    matrix_set(mat, 0, 0, 2.0);
+    matrix_set(mat, 0, 1, 3.0);
+    matrix_set(mat, 0, 2, 1.0);
+    matrix_set(mat, 0, 6, 30.0);
+    matrix_set(mat, 1, 0, 3.0);
+    matrix_set(mat, 1, 1, 2.0);
+    matrix_set(mat, 1, 3, 1.0);
+    matrix_set(mat, 1, 6, 24.0);
+    matrix_set(mat, 2, 0, 1.0);
+    matrix_set(mat, 2, 1, 1.0);
+    matrix_set(mat, 2, 4, -1.0);
+    matrix_set(mat, 2, 5, 1.0);
+    matrix_set(mat, 2, 6, 3.0);
+
+    simplex_maximize(mat, basic_vars, object_to, result, 2);
+
+    matrix_print(mat);
+    
+    matrix_free(&mat);
+
+    for (i = 0; i < vars_count; ++i) {
+        printf("x_%lu: %f\n", i, result[i]);
     }
 
     return 0;

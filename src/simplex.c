@@ -84,40 +84,108 @@ int _smallest_col_index(const struct matrix *mat, size_t row) {
     return min_index;
 }
 
-int _smallest_quotient_row_index(const struct matrix *mat, size_t col) {
-    size_t i, min_index;
+int _smallest_quotient_row_index(const struct matrix *mat, size_t col, size_t *row_to_optimize) {
+    size_t i, have_first_candidate;
     double min_value, test;
 
     if (!mat || !mat->items || col >= mat->cols || mat->rows == 0) {
         return -1;
     }
 
-    min_index = 0;
-    min_value = matrix_get(mat, 0, mat->cols - 1) / matrix_get(mat, 0, col);
+    have_first_candidate = 0;
 
-    for (i = 1; i < mat->rows - 1; ++i) {
+    for (i = 0; i < mat->rows; ++i) {
         test = matrix_get(mat, i, mat->cols - 1) / matrix_get(mat, i, col);
-        if (test < min_value) {
-            min_index = i;
-            min_value = test;
+
+        if (test > 0) {
+            if (!have_first_candidate) {
+                min_value = test;
+                *row_to_optimize = i;
+                have_first_candidate = 1;
+            }
+            else if (test < min_value) {
+                min_value = test;
+                *row_to_optimize = i;
+            }
         }
     }
 
-    return min_index;
+    if (!have_first_candidate) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
 }
 
-void simplex_maximize(struct matrix *mat) {
-    size_t smallest_quotient_row, smallest_quotient_col;
-    
-    if (!mat || !mat->items) {
-        return;
+int optimal_max_test(struct matrix *mat, size_t *base_vars, mat_num_type *object_to, size_t *col_to_optimize) {
+    mat_num_type max_value, test_value;
+    size_t col_index, row_index;
+
+    if (!mat || !mat->items || !base_vars || !object_to || !col_to_optimize) {
+        return -1;
     }
 
-    while (!_is_last_row_nonnegative(mat)) {
+    max_value = 0.;
+    for (col_index = 0; col_index < mat->cols - 1; ++col_index) {
+        test_value = object_to[col_index];
+        for (row_index = 0; row_index < mat->rows; ++row_index) {
+            printf("Test value: %f\n", test_value); /* #TODO: testovaci vypis, odebrat!!!!!!!!! */
+            test_value -= matrix_get(mat, row_index, col_index) * object_to[base_vars[row_index]];
+            printf("Test value: %f\n", test_value); /* #TODO: testovaci vypis, odebrat!!!!!!!!! */
+        }
+
+        printf("Test value: %f\n", test_value); /* #TODO: testovaci vypis, odebrat!!!!!!!!! */
+        if (test_value > max_value) {
+            max_value = test_value;
+            *col_to_optimize = col_index;
+        }
+    }
+    printf("Max value: %f\n", max_value); /* #TODO: testovaci vypis, odebrat!!!!!!!!! */
+    /* TODO: float point precision solve !!!!!! */
+    if (max_value <= 0) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object_to, mat_num_type *result, size_t real_vars_count) {
+    /* TODO: nekdy musim uvolnit base vars a object to */
+    size_t smallest_quotient_row, smallest_quotient_col, row_index;
+    
+    if (!mat || !mat->items || !base_vars || !object_to) {
+        return -2;
+    }
+
+    /* while (!_is_last_row_nonnegative(mat)) {
         smallest_quotient_col = _smallest_col_index(mat, mat->rows - 1);
         smallest_quotient_row = _smallest_quotient_row_index(mat, smallest_quotient_col);
         _matrix_pivoting(mat, smallest_quotient_row, smallest_quotient_col);
+    } */
+
+   while (!optimal_max_test(mat, base_vars, object_to, &smallest_quotient_col)) {
+        if (_smallest_quotient_row_index(mat, smallest_quotient_col, &smallest_quotient_row)) {
+            return 10; /* TODO: tady to znamená že jsem nedostal žádnou pozitivní thetu */
+        }
+        base_vars[smallest_quotient_row] = smallest_quotient_col;
+
+        printf("Pivot row: %lu, Pivot col: %lu\n", smallest_quotient_row, smallest_quotient_col);
+        matrix_print(mat);
+        _matrix_pivoting(mat, smallest_quotient_row, smallest_quotient_col);
+
+        for (row_index = 0; row_index < mat->rows; ++row_index) {
+            if (base_vars[row_index] >= real_vars_count) {
+                continue;
+            }
+            result[base_vars[row_index]] = matrix_get(mat, row_index, mat->cols - 1);
+        }
     }
+
+    return 0;
+
+
 }
 
 void simplex_minimize(struct matrix *mat) {

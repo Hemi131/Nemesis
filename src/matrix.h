@@ -132,4 +132,11 @@ void matrix_scale(struct matrix *mat, const mat_num_type scaler);
  */
 void matrix_move(struct matrix **target, struct matrix **source);
 
+/**
+ * \brief matrix_transpose Funkce provede transpozici matice `mat`.
+ * Traspinuje pouze čtvercové matice !!!
+ * \param mat Ukazatel na matici, která bude transponována.
+ */
+void matrix_transpose(struct matrix *mat);
+
 #endif

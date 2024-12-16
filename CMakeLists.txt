@@ -18,5 +18,8 @@ set(SOURCES
     src/queue.c
 )
 
+# Set the output directory for the executable
+#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/..)
+
 # Add the executable
-add_executable(stack_program ${SOURCES})
+add_executable(lp.exe ${SOURCES})
