@@ -45,14 +45,14 @@ void sort_str_by_len(char **str, size_t count);
  * \brief Funkce vymění název proměnné za její index v poli povolených proměnných.
  * \param str Řetězec.
  */
-void replace_vars_by_index(char *str, const char **vars, const size_t vars_count);
+void replace_vars_by_index(char *str, char **vars, const size_t vars_count);
 
 /**
  * \brief Funkce zkontroluje a přípraví výraz k parsování do RPN.
  * \param str Řetězec.
  * \return int 1, pokud je správně a připraven, jinak 0.
  */
-int prepare_expression(char *str, const char **vars, const size_t vars_count);
+int prepare_expression(char *str, char **vars, const size_t vars_count);
 
 /**
  * \brief Struktura pro reprezentaci prvku v reverzní polské notaci.

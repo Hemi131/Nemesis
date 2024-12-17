@@ -15,7 +15,7 @@ void _matrix_normalize_row_by_col(struct matrix *mat, size_t row, size_t col) {
     divider = matrix_get(mat, row, col);
 
     if (divider == 0) {
-        printf("Division by zero.\n"); /* #TODO: testovaci vypis, odebrat!!!!!!!!! */
+        printf("Division by zero.\n"); /* #TODO: mozna nejak pojistit*/
         return;
     }
 
@@ -45,43 +45,6 @@ void _matrix_pivoting(struct matrix *mat, size_t row, size_t col) {
             matrix_set(mat, i, j, matrix_get(mat, i, j) - multiplier * matrix_get(mat, row, j));
         }
     }
-}
-
-int _is_last_row_nonnegative(const struct matrix *mat)
-{
-    size_t i;
-
-    if (!mat || !mat->items || mat->rows == 0) {
-        return 0;
-    }
-
-    for (i = 0; i < mat->cols; ++i) {
-        if (matrix_get(mat, mat->rows - 1, i) < 0) {
-            return 0;
-        }
-    }
-
-    return 1;
-}
-
-int _smallest_col_index(const struct matrix *mat, size_t row) {
-    size_t i, min_index;
-    double min_value, test;
-
-    if (!mat || !mat->items || row >= mat->rows || mat->cols == 0)
-        return -1; /* TODO: testovat to pak po pouziti neb nejak predelat. */
-
-    min_index = 0;
-    min_value = matrix_get(mat, row, 0);
-    for (i = 1; i < mat->cols; ++i) { /* TODO: psat tam meyerz nebo ne mey mat a cols? */
-        test = matrix_get(mat, row, i);
-        if (test < min_value) {
-            min_index = i;
-            min_value = test;
-        }
-    }
-
-    return min_index;
 }
 
 int _smallest_quotient_row_index(const struct matrix *mat, size_t col, size_t *row_to_optimize) {
@@ -130,19 +93,15 @@ int optimal_max_test(struct matrix *mat, size_t *base_vars, mat_num_type *object
     for (col_index = 0; col_index < mat->cols - 1; ++col_index) {
         test_value = object_to[col_index];
         for (row_index = 0; row_index < mat->rows; ++row_index) {
-            printf("Test value: %f\n", test_value); /* #TODO: testovaci vypis, odebrat!!!!!!!!! */
             test_value -= matrix_get(mat, row_index, col_index) * object_to[base_vars[row_index]];
-            printf("Test value: %f\n", test_value); /* #TODO: testovaci vypis, odebrat!!!!!!!!! */
         }
 
-        printf("Test value: %f\n", test_value); /* #TODO: testovaci vypis, odebrat!!!!!!!!! */
         if (test_value > max_value) {
             max_value = test_value;
             *col_to_optimize = col_index;
         }
     }
-    printf("Max value: %f\n", max_value); /* #TODO: testovaci vypis, odebrat!!!!!!!!! */
-    /* TODO: float point precision solve !!!!!! */
+
     if (max_value <= 0) {
         return 1;
     }
@@ -152,7 +111,6 @@ int optimal_max_test(struct matrix *mat, size_t *base_vars, mat_num_type *object
 }
 
 int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object_to, mat_num_type *result, size_t real_vars_count) {
-    /* TODO: nekdy musim uvolnit base vars a object to */
     size_t smallest_quotient_row, smallest_quotient_col, row_index;
     
     if (!mat || !mat->items || !base_vars || !object_to) {

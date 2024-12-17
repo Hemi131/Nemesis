@@ -62,9 +62,30 @@ void print_array(char *arr[], size_t n) {
     }
 }
 
+void print_array_d(int arr[], size_t n) {
+    size_t i;
+    for (i = 0; i < n; ++i) {
+        printf("%d\n", arr[i]);
+    }
+}
+
+void print_array_f(mat_num_type arr[], size_t n) {
+    size_t i;
+    for (i = 0; i < n; ++i) {
+        printf("%f\n", arr[i]);
+    }
+}
+
+void print_array_lu(size_t arr[], size_t n) {
+    size_t i;
+    for (i = 0; i < n; ++i) {
+        printf("%lu\n", arr[i]);
+    }
+}
+
 int main2() {
     char str[100] = "3x_1+ 2 * x_11";
-    const char *vars[] = {"x_1", "x_11"};
+    char *vars[] = {"x_1", "x_11"};
     size_t vars_count = 2;
 
     if (!prepare_expression(str, vars, vars_count)) {
@@ -77,7 +98,7 @@ int main2() {
     return 0;
 }
 
-int mainT() {
+int main() {
     #define MAX_CHARS 256
     #define MAX_LINES 20
 
@@ -91,15 +112,29 @@ int mainT() {
     size_t bounds_count = 0;
     int found_maximize = 0;
     int found_minimize = 0;
-    size_t i;
+    size_t i, j, cols_count;
 
-    struct evaluation_expression expr1, expr2, result, purpose_expr, subject_expr[MAX_LINES], bounds_expr[MAX_LINES];
+    struct evaluation_expression expr1, expr2, exprResult, purpose_expr, subject_expr[MAX_LINES], bounds_expr[MAX_LINES];
     int subject_op[MAX_LINES];
     int bounds_op[MAX_LINES];
+    double object_to[3 * MAX_VAR_COUNT];
     char **allowed_vars;
     size_t allowed_vars_count = 0;
     char * token;
 
+    struct matrix *mat;
+    const mat_num_type M = 1000.0;
+    size_t base_vars[MAX_VAR_COUNT];
+    size_t base_vars_index;
+
+    mat_num_type result[MAX_VAR_COUNT];
+
+    memset(object_to, 0, sizeof(object_to));
+    memset(base_vars, 0, sizeof(base_vars));
+    memset(result, 0, sizeof(result));
+    
+
+/* FILE INPUT HANDLING */
 
     file = fopen("../test.lp", "r");
     if (!file) {
@@ -168,6 +203,7 @@ int mainT() {
     }
 
     fclose(file);
+    
 
     if (found_maximize) {
         printf("Objective: Maximize\n");
@@ -192,6 +228,8 @@ int mainT() {
         return 1;
     }
 
+/* PARSING INPUT */
+
     /* parsing allowed vars */
     allowed_vars = malloc(MAX_VAR_COUNT * sizeof(char *));
     for (i = 0; i < MAX_VAR_COUNT; i++) {
@@ -211,6 +249,7 @@ int mainT() {
         printf("%s\n", allowed_vars[i]);
     }
 
+
     if (!prepare_expression(purpose, allowed_vars, allowed_vars_count)) {
         printf("Failed to prepare purpose expression\n");
         return 1;
@@ -219,21 +258,165 @@ int mainT() {
 
     purpose_expr = rpn_evaluate(parse_to_rpn(purpose), allowed_vars_count);
 
-    printf("Purpose expression: %f\n", purpose_expr.constant);
+    /* printf("Purpose expression const: %f\n", purpose_expr.constant);
     for (i = 0; i < purpose_expr.var_count; i++) {
         printf("var_%lu: %f\n", i, purpose_expr.var_koeficients[i]);
+    }     */
+
+    for (i = 0; i < subject_count; ++i) {
+        
+        if (strstr(subject[i], "<=")) {
+            subject_op[i] = -1;
+            replace_substr(subject[i], "<=", "|");
+        } else if (strstr(subject[i], ">=")) {
+            subject_op[i] = 1;
+            replace_substr(subject[i], ">=", "|");
+        } else if (strstr(subject[i], "=")) {
+            subject_op[i] = 0;
+            replace_substr(subject[i], "=", "|");
+        } else {
+            printf("Error: unknown operator in subject\n"); 
+            /* TODO: error handling */
+        }
     }
 
-    
+    for (i = 0; i < bounds_count; ++i) {
+        if (strstr(bounds[i], "<=")) {
+            bounds_op[i] = -1;
+            replace_substr(bounds[i], "<=", "|");
+        } else if (strstr(bounds[i], ">=")) {
+            bounds_op[i] = 1;
+            replace_substr(bounds[i], ">=", "|");
+        } else if (strstr(bounds[i], "=")) {
+            bounds_op[i] = 0;
+            replace_substr(bounds[i], "=", "|");
+        } else {
+            printf("Error: unknown operator in bounds\n");
+        }
+    }
+
+    /* print_array_d(subject_op, subject_count);
+    print_array_d(bounds_op, bounds_count); */
+
+    for (i = 0; i < subject_count; i++) {
+        token = strtok(subject[i], "|");
+        if (!prepare_expression(token, allowed_vars, allowed_vars_count)) {
+            printf("Failed to prepare subject expression\n");
+            return 1;
+        }
+        expr1 = rpn_evaluate(parse_to_rpn(subject[i]), allowed_vars_count);
+
+        token = strtok(NULL, "|");
+        if (!prepare_expression(token, allowed_vars, allowed_vars_count)) {
+            printf("Failed to prepare subject expression\n");
+            return 1;
+        }
+        expr2 = rpn_evaluate(parse_to_rpn(token), allowed_vars_count);
+
+        exprResult = sub_evaluation_expressions(expr1, expr2);
+
+        subject_expr[i] = exprResult;
+    }
+
+
+    for (i = 0; i < bounds_count; ++i) {
+        token = strtok(bounds[i], "|");
+        if (!prepare_expression(token, allowed_vars, allowed_vars_count)) {
+            printf("Failed to prepare bounds expression\n");
+            return 1;
+        }
+        expr1 = rpn_evaluate(parse_to_rpn(bounds[i]), allowed_vars_count);
+
+        token = strtok(NULL, "|");
+        if (!prepare_expression(token, allowed_vars, allowed_vars_count)) {
+            printf("Failed to prepare bounds expression\n");
+            return 1;
+        }
+        expr2 = rpn_evaluate(parse_to_rpn(token), allowed_vars_count);
+
+        exprResult = sub_evaluation_expressions(expr1, expr2);
+
+        bounds_expr[i] = exprResult;
+    }
+
+
+
+/* MATRIX PREP */
+
+    cols_count = allowed_vars_count + 1; /* +1 for constant */
+    for (i = 0; i < subject_count; i++) {
+        if (subject_op[i] == 1) {
+            cols_count += 2;
+        }
+        else {
+            cols_count += 1;
+        }
+    }
+
+    mat = matrix_allocate(subject_count, cols_count, 0.0);
+    for (i = 0; i < subject_count; ++i) {
+        for (j = 0; j < allowed_vars_count; ++j) {
+            matrix_set(mat, i, j, subject_expr[i].var_koeficients[j]);
+        }
+        matrix_set(mat, i, cols_count - 1, -1.0 * subject_expr[i].constant); /* kvůli přehození na druhou stranu */
+    }
+
+    for (i = 0; i < purpose_expr.var_count; ++i) {
+        object_to[i] = purpose_expr.var_koeficients[i];
+    }
+
+    base_vars_index = 0;
+    j = allowed_vars_count;
+    for (i = 0; i < subject_count; ++i) {
+        if (subject_op[i] == 1) {
+            matrix_set(mat, i, j, -1.0);
+            object_to[j] = 0.0;
+            j++;
+            matrix_set(mat, i, j, 1.0);
+            object_to[j] = -M; /* TODO: tady to mínus platí jenom při maximalizaci */
+            base_vars[base_vars_index++] = j;
+            j++;
+        }
+        else if (subject_op[i] == -1) {
+            matrix_set(mat, i, j, 1.0);
+            object_to[j] = 0.0;
+            base_vars[base_vars_index++] = j;
+            j++;
+        }
+        else {
+            matrix_set(mat, i, j, 1.0);
+            object_to[j] = -M; /* TODO: tady to mínus platí jenom při maximalizaci */
+            base_vars[base_vars_index++] = j;
+            j++;
+        }
+    }
+
+    printf("Base vars:\n");
+    print_array_lu(base_vars, subject_count);
+    printf("Object to:\n");
+    print_array_f(object_to, cols_count);
+
+/* SIMPLEX USE */
+
+    simplex_maximize(mat, base_vars, object_to, result, allowed_vars_count);
+
+    matrix_print(mat);
+
+    for (i = 0; i < allowed_vars_count; ++i) {
+        printf("x_%lu: %f\n", i, result[i]);
+    }
+
+/* FREE */
 
     for (i = 0; i < MAX_VAR_COUNT; ++i) {
         free(allowed_vars[i]);
     }
     free(allowed_vars);
+    matrix_free(&mat);
     return 0;
 }
 
-int main() {
+int mainTT() {
     struct matrix *mat;
     size_t basic_vars[] = {2, 3, 5};
     mat_num_type object_to[] = {6.0, 4.0, 0.0, 0.0, 0.0, -1000.0};

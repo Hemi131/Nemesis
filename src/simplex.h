@@ -16,22 +16,6 @@ void _matrix_normalize_row_by_col(struct matrix *mat, size_t row, size_t col);
  */
 void _matrix_pivoting(struct matrix *mat, size_t row, size_t col);
 
-
-/**
- * \brief Funkce zjistí, jestli je poslední řádka matice `matrix` kladná nebo alespoň neutrální.
- * \param mat Ukazatel na instanci struktury `matrix`, nad kterou bude operace provedena.
- * \return int 1, pokud je poslední řádka matice nenegativní, jinak 0.
- */
-int _is_last_row_nonnegative(const struct matrix *mat);
-
-/**
- * \brief Funkce vrátí index sloupce s nejmenší hodnotou v řádce `row` matice `mat`.
- * \param mat Ukazatel na instanci struktury `matrix`, nad kterou bude operace provedena.
- * \param row Index řádku matice.
- * \return size_t Index sloupce s nejmenší hodnotou v poslední řádce matice.
- */
-int _smallest_col_index(const struct matrix *mat, size_t row);
-
 /**
  * \brief Funkce vrátí index řádku s nejmenším kvocientem.
  *       Kvocient je určen jako podíl hodnoty v posledním sloupci a hodnoty v zadaném sloupci.

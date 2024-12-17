@@ -88,7 +88,7 @@ void sort_str_by_len(char *arr[], size_t n) {
     }
 }
 
-void replace_vars_by_index(char *str, const char **vars, const size_t vars_count) {
+void replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
     size_t i, j;
     char buffer[25];
     char **vars_sorted;
@@ -114,7 +114,7 @@ void replace_vars_by_index(char *str, const char **vars, const size_t vars_count
     free(vars_sorted);
 }
 
-int prepare_expression(char *str, const char **vars, const size_t vars_count) {
+int prepare_expression(char *str, char **vars, const size_t vars_count) {
     if (!check_brackets(str)) {
         return 0;
     }
@@ -126,6 +126,10 @@ int prepare_expression(char *str, const char **vars, const size_t vars_count) {
     replace_vars_by_index(str, vars, vars_count);
 
     if (!remove_substr(str, " ")) {
+        return 0;
+    }
+
+    if (!remove_substr(str, "\n")) {
         return 0;
     }
 
