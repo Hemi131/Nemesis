@@ -117,7 +117,8 @@ int main() {
     struct evaluation_expression expr1, expr2, exprResult, purpose_expr, subject_expr[MAX_LINES], bounds_expr[MAX_LINES];
     int subject_op[MAX_LINES];
     int bounds_op[MAX_LINES];
-    double object_to[3 * MAX_VAR_COUNT];
+    mat_num_type object_to[3 * MAX_VAR_COUNT];
+    mat_num_type problem_type_coeficient = 1.0;
     char **allowed_vars;
     size_t allowed_vars_count = 0;
     char * token;
@@ -300,18 +301,21 @@ int main() {
 
     for (i = 0; i < subject_count; i++) {
         token = strtok(subject[i], "|");
-        if (!prepare_expression(token, allowed_vars, allowed_vars_count)) {
+        strcpy(buffer, token);
+        if (!prepare_expression(buffer, allowed_vars, allowed_vars_count)) {
             printf("Failed to prepare subject expression\n");
             return 1;
         }
-        expr1 = rpn_evaluate(parse_to_rpn(subject[i]), allowed_vars_count);
+        
+        expr1 = rpn_evaluate(parse_to_rpn(buffer), allowed_vars_count);
 
         token = strtok(NULL, "|");
-        if (!prepare_expression(token, allowed_vars, allowed_vars_count)) {
+        strcpy(buffer, token);
+        if (!prepare_expression(buffer, allowed_vars, allowed_vars_count)) {
             printf("Failed to prepare subject expression\n");
             return 1;
         }
-        expr2 = rpn_evaluate(parse_to_rpn(token), allowed_vars_count);
+        expr2 = rpn_evaluate(parse_to_rpn(buffer), allowed_vars_count);
 
         exprResult = sub_evaluation_expressions(expr1, expr2);
 
@@ -361,8 +365,11 @@ int main() {
         matrix_set(mat, i, cols_count - 1, -1.0 * subject_expr[i].constant); /* kvůli přehození na druhou stranu */
     }
 
+    if (found_minimize) {
+        problem_type_coeficient = -1.0;
+    }
     for (i = 0; i < purpose_expr.var_count; ++i) {
-        object_to[i] = purpose_expr.var_koeficients[i];
+        object_to[i] = problem_type_coeficient * purpose_expr.var_koeficients[i];
     }
 
     base_vars_index = 0;
@@ -373,7 +380,7 @@ int main() {
             object_to[j] = 0.0;
             j++;
             matrix_set(mat, i, j, 1.0);
-            object_to[j] = -M; /* TODO: tady to mínus platí jenom při maximalizaci */
+            object_to[j] = -M;
             base_vars[base_vars_index++] = j;
             j++;
         }
@@ -385,7 +392,7 @@ int main() {
         }
         else {
             matrix_set(mat, i, j, 1.0);
-            object_to[j] = -M; /* TODO: tady to mínus platí jenom při maximalizaci */
+            object_to[j] = -M;
             base_vars[base_vars_index++] = j;
             j++;
         }
@@ -403,7 +410,7 @@ int main() {
     matrix_print(mat);
 
     for (i = 0; i < allowed_vars_count; ++i) {
-        printf("x_%lu: %f\n", i, result[i]);
+        printf("%s = %f\n", allowed_vars[i], result[i]);
     }
 
 /* FREE */
