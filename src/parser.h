@@ -9,6 +9,21 @@
 
 #include <stddef.h>
 
+#define EXIT_INVALID_INPUT_FILE 1
+#define EXIT_INVALID_OUTPUT_FILE 2
+
+#define MAX_EXPRESSION_LENGTH 200
+
+/**
+ * \brief Funkce provede parsování argumentů příkazové řádky.
+ * \param argc Počet argumentů.
+ * \param argv Pole argumentů.
+ * \param input_file Ukazatel na řetězec, do kterého bude uložen název vstupního souboru.
+ * \param output_file Ukazatel na řetězec, do kterého bude uložen název výstupního souboru.
+ * \return int 1, pokud proběhla v pořádku, jinak 0.
+ */
+int args_parser(int argc, char *argv[], char **input_file, char **output_file);
+
 /**
  * \brief Funkce odstraní všechny výskyty podřetězce ze zadaného řetězce.
  * \param str Řetězec.

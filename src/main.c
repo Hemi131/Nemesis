@@ -83,22 +83,11 @@ void print_array_lu(size_t arr[], size_t n) {
     }
 }
 
-int main2() {
-    char str[100] = "3x_1+ 2 * x_11";
-    char *vars[] = {"x_1", "x_11"};
-    size_t vars_count = 2;
+int main(int argc, char *argv[]) {
+    int error_code = 0;
+    char *input_file;
+    char *output_file;
 
-    if (!prepare_expression(str, vars, vars_count)) {
-        printf("Failed to prepare expression\n");
-    }
-    else {
-        printf("Prepared expression: \"%s\"\n", str);
-    }
-
-    return 0;
-}
-
-int main() {
     #define MAX_CHARS 256
     #define MAX_LINES 20
 
@@ -135,6 +124,16 @@ int main() {
     memset(result, 0, sizeof(result));
     
 
+    error_code = args_parser(argc, argv, &input_file, &output_file);
+    if (error_code == EXIT_INVALID_INPUT_FILE) {
+        printf("Input file not found!\n");
+        goto fail_args;
+    }
+    if (error_code == EXIT_INVALID_OUTPUT_FILE) {
+        printf("Invalid output destination!\n");
+        goto fail_args;
+    }
+
 /* FILE INPUT HANDLING */
 
     file = fopen("../test.lp", "r");
@@ -147,7 +146,7 @@ int main() {
         if (buffer[0] == '\\' || buffer[0] == '\n') {
             continue;
         }
-    start:
+    input_parsing_start:
         if (strstr(buffer, "End")) {
             break;
         }
@@ -162,7 +161,7 @@ int main() {
                 strtok(buffer, ":");
                 strcpy(subject[subject_count++], strtok(NULL, ":"));
             }
-            goto start;
+            goto input_parsing_start;
 
         }
 
@@ -194,7 +193,7 @@ int main() {
                 replace_substr_with_end(buffer, "\\");
                 strcpy(bounds[bounds_count++], buffer);
             }
-            goto start;
+            goto input_parsing_start;
         }
   
         else {
@@ -420,41 +419,8 @@ int main() {
     }
     free(allowed_vars);
     matrix_free(&mat);
-    return 0;
-}
 
-int mainTT() {
-    struct matrix *mat;
-    size_t basic_vars[] = {2, 3, 5};
-    mat_num_type object_to[] = {6.0, 4.0, 0.0, 0.0, 0.0, -1000.0};
-    mat_num_type result[] = {0.0, 0.0};
-    size_t i, vars_count = 2;
 
-    mat = matrix_allocate(3, 7, 0.0);
-
-    matrix_set(mat, 0, 0, 2.0);
-    matrix_set(mat, 0, 1, 3.0);
-    matrix_set(mat, 0, 2, 1.0);
-    matrix_set(mat, 0, 6, 30.0);
-    matrix_set(mat, 1, 0, 3.0);
-    matrix_set(mat, 1, 1, 2.0);
-    matrix_set(mat, 1, 3, 1.0);
-    matrix_set(mat, 1, 6, 24.0);
-    matrix_set(mat, 2, 0, 1.0);
-    matrix_set(mat, 2, 1, 1.0);
-    matrix_set(mat, 2, 4, -1.0);
-    matrix_set(mat, 2, 5, 1.0);
-    matrix_set(mat, 2, 6, 3.0);
-
-    simplex_maximize(mat, basic_vars, object_to, result, 2);
-
-    matrix_print(mat);
-    
-    matrix_free(&mat);
-
-    for (i = 0; i < vars_count; ++i) {
-        printf("x_%lu: %f\n", i, result[i]);
-    }
-
-    return 0;
+fail_args:
+    return error_code;
 }

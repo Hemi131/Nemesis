@@ -2,9 +2,39 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define MAX_EXPRESSION_LENGTH 200
-
 #include <stdio.h>
+
+int args_parser(int argc, char *argv[], char **input_file, char **output_file) {
+    *input_file = NULL;
+    *output_file = NULL;
+
+    int i;
+
+    if (argc < 2 || !argv) {
+        return EXIT_INVALID_INPUT_FILE;
+    }
+
+    for (i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
+            if (i + 1 < argc) {
+                *output_file = argv[i + 1];
+                i++;
+            }
+            else {
+                return EXIT_INVALID_OUTPUT_FILE;
+            }
+        }
+        else {
+            *input_file = argv[i];
+        }
+    }
+
+    if (*input_file == NULL) {
+        return EXIT_INVALID_INPUT_FILE;
+    }
+
+    return EXIT_SUCCESS;
+}
 
 int remove_substr(char *str, const char *substr) {
     char *pos, *temp;
