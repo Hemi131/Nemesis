@@ -139,4 +139,6 @@ void matrix_move(struct matrix **target, struct matrix **source);
  */
 void matrix_transpose(struct matrix *mat);
 
+int is_column_zero(const struct matrix *mat, size_t col);
+
 #endif

@@ -11,8 +11,18 @@
 
 #define EXIT_INVALID_INPUT_FILE 1
 #define EXIT_INVALID_OUTPUT_FILE 2
+#define UNUSED_VAR 9
+#define EXIT_UNKNOWN_VAR 10
+#define EXIT_SYNTAX_ERROR 11
+#define EXIT_MALLOC_ERROR 1001
 
 #define MAX_EXPRESSION_LENGTH 200
+#define MAX_CHARS 256
+#define MAX_LINES 20
+#define MAX_VAR_COUNT 10
+
+#define MAXIMIZE 1
+#define MINIMIZE -1
 
 /**
  * \brief Funkce provede parsování argumentů příkazové řádky.
@@ -37,7 +47,7 @@ int remove_substr(char *str, const char *substr);
  * \param str Řetězec.
  * \return int 1, pokud je validní, jinak 0.
  */
-int check_valid_chars(const char *str);
+int check_valid_chars(const char *str, char *unknown_var);
 
 /**
  * \brief Funkce nahradí všechny výskyty podřetězce za jiný podřetězec.
@@ -67,7 +77,7 @@ void replace_vars_by_index(char *str, char **vars, const size_t vars_count);
  * \param str Řetězec.
  * \return int 1, pokud je správně a připraven, jinak 0.
  */
-int prepare_expression(char *str, char **vars, const size_t vars_count);
+int prepare_expression(char *str, char **vars, const size_t vars_count, char *unknown_var);
 
 /**
  * \brief Struktura pro reprezentaci prvku v reverzní polské notaci.
@@ -118,8 +128,6 @@ struct rpn_item rpn_item_create_operator_second_level(char operator);
  * \return struct rpn_item* Ukazatel na nově vytvořený prvek RPN.
  */
 struct rpn_item rpn_item_create_bracket(char bracket);
-
-#define MAX_VAR_COUNT 10
 
 /**
  * \brief Struktura pro vyhodnocení výrazu.
@@ -200,7 +208,7 @@ int check_brackets(const char *str);
  * \param str Ukazatel na řetězec, ve kterém budou závorky změněny.
  * \return char* Ukazatel na nově vytvořený řetězec s novými závorkami.
  */
-int change_brackets(char *str);
+void change_brackets(char *str);
 
 /**
  * \brief Funkce provede převod infixový výraz na reverzní polskou notaci pomocí Shunting Yard algoritmu.
@@ -214,6 +222,26 @@ struct queue *parse_to_rpn(const char *str);
  * \param rpn Ukazatel na frontu s RPN výrazem.
  * \return evaluation_expression Výsledek vyhodnocení.
  */
-struct evaluation_expression rpn_evaluate(struct queue *rpn, const size_t var_count);
+int rpn_evaluate(struct queue *rpn, const size_t var_count, struct evaluation_expression* exprResult);
+
+
+struct problem_data {
+    int problem_type;
+    size_t subjects_count, bounds_count, allowed_vars_count;
+    struct evaluation_expression purpose_expr, *subjects_expr, *bounds_expr;
+    char **allowed_vars;
+    int *subjects_op, *bounds_op;
+    mat_num_type *result;
+};
+
+struct problem_data *problem_data_alloc(const size_t var_count, const size_t subjects_count, const size_t bounds_count, const int problem_type);
+
+int problem_data_init(struct problem_data *data, const size_t var_count, const size_t subjects_count, const size_t bounds_count, const int problem_type);
+
+void problem_data_deinit(struct problem_data *data);
+
+void problem_data_dealloc(struct problem_data *data);
+
+int input_parser(char *input_file, struct problem_data **problem_data, char *unknown_var);
 
 #endif

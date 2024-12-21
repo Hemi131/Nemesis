@@ -5,10 +5,10 @@
 #include <stdio.h>
 
 int args_parser(int argc, char *argv[], char **input_file, char **output_file) {
+    int i;
+
     *input_file = NULL;
     *output_file = NULL;
-
-    int i;
 
     if (argc < 2 || !argv) {
         return EXIT_INVALID_INPUT_FILE;
@@ -58,13 +58,26 @@ int remove_substr(char *str, const char *substr) {
     return 1;
 }
 
-int check_valid_chars(const char *str) {
+int check_valid_chars(const char *str, char *unknown_var) {
     size_t i;
+    int error = 0;
 
     for (i = 0; str[i] != '\0'; ++i) {
         if (!((str[i] >= '0' && str[i] <= '9') || str[i] == '+' || str[i] == '-' || str[i] == '*' || str[i] == '/' || str[i] == '(' || str[i] == ')' || str[i] == '{' || str[i] == '}' || str[i] == '.')) {
-            return 0;
+            strcpy(unknown_var, str + i);
+            error = 1;
+            break;
         }
+    }
+
+    if (error) {
+        for (i = 0; unknown_var[i] != '\0'; ++i) {
+            if ((unknown_var[i] == '+' || unknown_var[i] == '-' || unknown_var[i] == '*' || unknown_var[i] == '/' || unknown_var[i] == '(' || unknown_var[i] == ')' || unknown_var[i] == '{' || unknown_var[i] == '}' || unknown_var[i] == '.')) {
+                unknown_var[i] = '\0';
+                break;
+            }
+        }
+        return 0;
     }
 
     return 1;
@@ -120,7 +133,7 @@ void sort_str_by_len(char *arr[], size_t n) {
 
 void replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
     size_t i, j;
-    char buffer[25];
+    char buffer[MAX_CHARS];
     char **vars_sorted;
 
     vars_sorted = malloc(vars_count * sizeof(char *));
@@ -144,27 +157,25 @@ void replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
     free(vars_sorted);
 }
 
-int prepare_expression(char *str, char **vars, const size_t vars_count) {
+int prepare_expression(char *str, char **vars, const size_t vars_count, char* unknown_var) {
     if (!check_brackets(str)) {
-        return 0;
+        return EXIT_SYNTAX_ERROR;
     }
 
-    if(!change_brackets(str)) {
-        return 0;
-    }
+    change_brackets(str);
 
     replace_vars_by_index(str, vars, vars_count);
 
     if (!remove_substr(str, " ")) {
-        return 0;
+        return EXIT_SYNTAX_ERROR;
     }
 
     if (!remove_substr(str, "\n")) {
-        return 0;
+        return EXIT_SYNTAX_ERROR;
     }
 
-    if (!check_valid_chars(str)) {
-        return 0;
+    if (!check_valid_chars(str, unknown_var)) {
+        return EXIT_UNKNOWN_VAR;
     }
 
     return 1;
@@ -222,12 +233,12 @@ wrong_brackets:
     return 0;
 }
 
-int change_brackets(char *str) {
+void change_brackets(char *str) {
     size_t i;
     char *new_str = malloc((MAX_EXPRESSION_LENGTH + 1) * sizeof(char));
 
     if (!new_str) {
-        return 0;
+        return;
     }
 
     for (i = 0; str[i] != '\0'; ++i) {
@@ -250,8 +261,6 @@ int change_brackets(char *str) {
     strcpy(str, new_str);
 
     free(new_str);
-
-    return 1;
 }
 
 struct rpn_item rpn_item_create_number(mat_num_type number) {
@@ -426,12 +435,12 @@ struct queue *parse_to_rpn(const char *str) {
         return NULL;
     }
 
-    s = stack_alloc(strlen(str), sizeof(struct rpn_item));
+    s = stack_alloc(strlen(str) + 1, sizeof(struct rpn_item)); /* +1 for possible operator on the beggining*/
 
     if (!s) {
         return NULL;
     }
-    q = queue_alloc(strlen(str), sizeof(struct rpn_item));
+    q = queue_alloc(strlen(str) + 1, sizeof(struct rpn_item));
 
     if (!q) {
         stack_dealloc(&s);
@@ -588,22 +597,23 @@ end:
     return q;
 }
 
-struct evaluation_expression rpn_evaluate(struct queue *rpn, const size_t var_count) {
+ int rpn_evaluate(struct queue *rpn, const size_t var_count, struct evaluation_expression* exprResult) {
+    int error_code = EXIT_SUCCESS;
     struct  stack *s;
 
     struct rpn_item rpn_item;
     struct evaluation_expression expr1, expr2, result;
 
     if (!rpn) {
-        printf("Error: invalid RPN\n"); /* #TODO: error handling */
-        return create_evaluation_expression_constant(0.0);
+        error_code = EXIT_FAILURE;
+        goto rpn_evaluate_failed;
     }
     
     s = stack_alloc(queue_item_count(rpn), sizeof(struct evaluation_expression));
 
     if (!s) {
-        printf("Error: stack allocation failed\n"); /* #TODO: error handling */
-        return create_evaluation_expression_constant(0.0);
+        error_code = EXIT_FAILURE;
+        goto rpn_evaluate_failed;
     }
 
     while (queue_dequeue(rpn, &rpn_item)) {
@@ -618,15 +628,15 @@ struct evaluation_expression rpn_evaluate(struct queue *rpn, const size_t var_co
                 }
 
                 if (!stack_push(s, &expr1)) {
-                    printf("Error: stack push failed\n"); /* #TODO: error handling */
-                    return create_evaluation_expression_constant(0.0);
+                    error_code = EXIT_FAILURE;
+                    goto rpn_evaluate_failed;
                 }
                 break;
             case '1':
             case '2':
                 if (!stack_pop(s, &expr2) || !stack_pop(s, &expr1)) {
-                    printf("Error: invalid RPN\n"); /* #TODO: error handling */
-                    return create_evaluation_expression_constant(0.0);
+                    error_code = EXIT_FAILURE;
+                    goto rpn_evaluate_failed;
                 }
 
                 if (rpn_item.data.operator == '+') {
@@ -642,30 +652,547 @@ struct evaluation_expression rpn_evaluate(struct queue *rpn, const size_t var_co
                     result = divide_evaluation_expressions(expr1, expr2);
                 }
                 else {
-                    printf("Error: invalid RPN\n"); /* #TODO: error handling  bylo tam neco jinyho nez + nebo - nebo * nebo / */
-                    return create_evaluation_expression_constant(0.0);
+                    error_code = EXIT_FAILURE;
+                    goto rpn_evaluate_failed;
                 }
 
                 if (!stack_push(s, &result)) {
-                    printf("Error: stack push failed\n"); /* #TODO: error handling */
-                    return create_evaluation_expression_constant(0.0);
+                    error_code = EXIT_FAILURE;
+                    goto rpn_evaluate_failed;
                 }
                 break;
             default:
-                printf("Error: spatny operator type\n"); /* #TODO: error handling */
-                return create_evaluation_expression_constant(0.0);
+                error_code = EXIT_FAILURE;
+                goto rpn_evaluate_failed;
         }
 
 
     }
 
     if (!stack_pop(s, &result) || stack_item_count(s) != 0) {
-        printf("Error: invalid RPN\n"); /* #TODO: error handling */
-        return create_evaluation_expression_constant(0.0);
+        error_code = EXIT_FAILURE;
+        goto rpn_evaluate_failed;
     }
 
-    stack_dealloc(&s); /* TODO: nezapomenout na stack dealloc pri chybe */
+
+    *exprResult = result;
+rpn_evaluate_failed:
+    stack_dealloc(&s);
     queue_dealloc(&rpn);
 
-    return result;
+    return error_code;
+}
+
+struct problem_data *problem_data_alloc(const size_t var_count, const size_t subjects_count, const size_t bounds_count, const int problem_type) {
+    struct problem_data *data = malloc(sizeof(struct problem_data));
+
+    if (!data) {
+        return NULL;
+    }
+
+    if (!problem_data_init(data, var_count, subjects_count, bounds_count, problem_type)) {
+        free(data);
+        return NULL;
+    }
+
+    return data;
+}
+
+int problem_data_init(struct problem_data *data, const size_t var_count, const size_t subjects_count, const size_t bounds_count, const int problem_type) {
+    size_t i, j;
+
+    if (!data) {
+        return 0;
+    }
+
+    data->subjects_count = subjects_count;
+    data->bounds_count = bounds_count;
+    data->allowed_vars_count = var_count;
+    data->problem_type = problem_type;
+
+    data->subjects_expr = NULL;
+    data->bounds_expr = NULL;
+    data->allowed_vars = NULL;
+    data->bounds_op = NULL;
+    data->subjects_op = NULL;
+    data->result = NULL;
+
+    data->subjects_expr = malloc(data->subjects_count * sizeof(struct evaluation_expression));
+    data->bounds_expr = malloc(data->bounds_count * sizeof(struct evaluation_expression));
+    data->allowed_vars = malloc(data->allowed_vars_count * sizeof(char *));
+    data->bounds_op = malloc(data->bounds_count * sizeof(int));
+    data->subjects_op = malloc(data->subjects_count * sizeof(int));
+    data->result = malloc(data->allowed_vars_count * sizeof(mat_num_type));
+
+    if (data->allowed_vars) {
+        for (i = 0; i < data->allowed_vars_count; i++) {
+            data->allowed_vars[i] = NULL;
+        }
+
+        for (i = 0; i < data->allowed_vars_count; i++) {
+            data->allowed_vars[i] = malloc(MAX_CHARS * sizeof(char));
+            if (!data->allowed_vars[i]) {
+                for (j = 0; j < i; j++) {
+                    if (data->allowed_vars[j]) {
+                        free(data->allowed_vars[j]);
+                    }
+                }
+                free(data->allowed_vars);
+                data->allowed_vars = NULL;
+                break;
+            }
+        }
+    }
+    
+    if (!data->subjects_expr || !data->bounds_expr || !data->allowed_vars || !data->bounds_op || !data->subjects_op || !data->result) {
+        if (data->subjects_expr) {
+            free(data->subjects_expr);
+        }
+
+        if (data->bounds_expr) {
+            free(data->bounds_expr);
+        }
+
+        if (data->allowed_vars) {
+            free(data->allowed_vars);
+        }
+
+        if (data->bounds_op) {
+            free(data->bounds_op);
+        }
+
+        if (data->subjects_op) {
+            free(data->subjects_op);
+        }
+
+        if (data->result) {
+            free(data->result);
+        }
+
+        return 0;
+    }
+
+    for (i = 0; i < data->allowed_vars_count; i++) {
+        data->result[i] = 0.0;
+    }
+
+    return 1;
+}
+
+void problem_data_deinit(struct problem_data *data) {
+    size_t i;
+
+    if (!data) {
+        return;
+    }
+
+    if (data->subjects_expr) {
+        free(data->subjects_expr);
+    }
+
+    if (data->bounds_expr) {
+        free(data->bounds_expr);
+    }
+
+    if (data->allowed_vars) {
+        for (i = 0; i < data->allowed_vars_count; i++) {
+            if (data->allowed_vars[i]) {
+                free(data->allowed_vars[i]);
+            }
+        }
+
+        free(data->allowed_vars);
+    }
+
+    if (data->bounds_op) {
+        free(data->bounds_op);
+    }
+
+    if (data->subjects_op) {
+        free(data->subjects_op);
+    }
+
+    if (data->result) {
+        free(data->result);
+    }
+}
+
+void problem_data_dealloc(struct problem_data *data) {
+    if (!data) {
+        return;
+    }
+
+    problem_data_deinit(data);
+    free(data);
+}
+
+int input_parser(char *input_file, struct problem_data **problem_data, char *unknown_var) {
+    int error_code = 0;
+    int testReturn;
+    FILE *file;
+    struct problem_data *data;
+
+    char *buffer = NULL;
+    char *purpose = NULL;
+    char *generals = NULL;
+    char **subjects = NULL;
+    char **bounds = NULL;
+
+    size_t subjects_count = 0;
+    size_t bounds_count = 0;
+    size_t allowed_vars_count = 0;
+    int found_maximize = 0;
+    int found_minimize = 0;
+
+    size_t i;
+    char *token;
+    struct queue *queue;
+    struct evaluation_expression expr1, expr2, exprResult;
+
+
+    file = fopen(input_file, "r");
+    if (!file) {
+        error_code = EXIT_INVALID_INPUT_FILE;
+        goto input_parsing_fail_input_file;
+    }
+
+    buffer = malloc((MAX_CHARS + 1) * sizeof(char));
+    if (!buffer) {
+        error_code = EXIT_MALLOC_ERROR;
+        goto input_parsing_fail_buffer_malloc;
+    }
+
+    purpose = malloc((MAX_CHARS + 1) * sizeof(char));
+    if (!purpose) {
+        error_code = EXIT_MALLOC_ERROR;
+        goto input_parsing_fail_purpose_malloc;
+    }
+
+    generals = malloc((MAX_CHARS + 1) * sizeof(char));
+    if (!generals) {
+        error_code = EXIT_MALLOC_ERROR;
+        goto input_parsing_fail_generals_malloc;
+    }
+
+    subjects = malloc(MAX_LINES * sizeof(char *));
+    if (!subjects) {
+        error_code = EXIT_MALLOC_ERROR;
+        goto input_parsing_fail_subjects_malloc;
+    }
+
+    for (i = 0; i < MAX_LINES; i++) {
+        subjects[i] = NULL;
+    }
+    for (i = 0; i < MAX_LINES; i++) {
+        subjects[i] = malloc((MAX_CHARS + 1) * sizeof(char));
+        if (!subjects[i]) {
+            error_code = EXIT_MALLOC_ERROR;
+            goto input_parsing_fail_subject_item_malloc;
+        }
+    }
+
+    bounds = malloc(MAX_LINES * sizeof(char *));
+
+    if (!bounds) {
+        error_code = EXIT_MALLOC_ERROR;
+        goto input_parsing_fail_bounds_malloc;
+    }
+
+    for (i = 0; i < MAX_LINES; i++) {
+        bounds[i] = NULL;
+    }
+
+    for (i = 0; i < MAX_LINES; i++) {
+        bounds[i] = malloc((MAX_CHARS + 1) * sizeof(char));
+        if (!bounds[i]) {
+            error_code = EXIT_MALLOC_ERROR;
+            goto input_parsing_fail_bounds_item_malloc;
+        }
+    }
+
+    /* LOADING FILE */
+
+    while (fgets(buffer, MAX_CHARS, file)) {
+        if (buffer[0] == '\\' || buffer[0] == '\n') {
+            continue;
+        }
+    input_parsing_start:
+        if (strstr(buffer, "End")) {
+            break;
+        }
+
+        if (strstr(buffer, "Subject To")) {
+            while (fgets(buffer, MAX_CHARS, file) && !strstr(buffer, "Maximize") && !strstr(buffer, "Minimize")&& !strstr(buffer, "End") && !strstr(buffer, "Generals")&& !strstr(buffer, "Bounds")) {
+                if (buffer[0] == '\\' || buffer[0] == '\n') {
+                    continue;
+                }
+
+                replace_substr_with_end(buffer, "\\");
+                strtok(buffer, ":");
+                strcpy(subjects[subjects_count++], strtok(NULL, ":"));
+            }
+            goto input_parsing_start;
+
+        }
+
+        else if (strstr(buffer, "Maximize")) {
+            found_maximize = 1;
+            fgets(buffer, MAX_CHARS, file);
+            replace_substr_with_end(buffer, "\\");
+            strcpy(purpose, buffer);
+        }
+
+        else if (strstr(buffer, "Minimize")) {
+            found_minimize = 1;
+            fgets(buffer, MAX_CHARS, file);
+            replace_substr_with_end(buffer, "\\");
+            strcpy(purpose, buffer);
+        }
+
+        else if (strstr(buffer, "Generals")) {
+            fgets(buffer, MAX_CHARS, file);
+            replace_substr_with_end(buffer, "\\");
+            strcpy(generals, buffer);
+        }
+
+        else if (strstr(buffer, "Bounds")) {
+            while (fgets(buffer, MAX_CHARS, file) && !strstr(buffer, "Maximize") && !strstr(buffer, "Minimize")&& !strstr(buffer, "End") && !strstr(buffer, "Generals")&& !strstr(buffer, "Subject To")) {
+                if (buffer[0] == '\\' || buffer[0] == '\n') {
+                    continue;
+                }
+                replace_substr_with_end(buffer, "\\");
+                strcpy(bounds[bounds_count++], buffer);
+            }
+            goto input_parsing_start;
+        }
+  
+        else {
+            /* TODO: odebrat tohle vypsani */
+            printf("Unknown line: %s\n", buffer);
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_unknown_line;
+        }
+
+    }
+
+    if ((found_maximize && found_minimize) || (!found_maximize && !found_minimize)) {
+            /* TODO: odebrat tohle vypsani */
+            printf("Error: Objective not found or multiple objectives found\n");
+            return EXIT_SYNTAX_ERROR;
+        }
+
+    /* PARSING INPUT */
+
+    strcpy(buffer, generals);
+    token = strtok(buffer, " ");
+    while (token != NULL) {
+        allowed_vars_count++;
+        token = strtok(NULL, " ");
+    }
+
+    data = problem_data_alloc(allowed_vars_count, subjects_count, bounds_count, found_maximize ? MAXIMIZE : MINIMIZE);
+    *problem_data = data;
+    if (!data) {
+        error_code = EXIT_MALLOC_ERROR;
+        goto input_parsing_fail_data_alloc;
+    }
+
+    i = 0;
+    token = strtok(generals, " ");
+    while (token != NULL) {
+        strcpy(data->allowed_vars[i], token);
+        remove_substr(data->allowed_vars[i], "\n");
+        i++;
+        token = strtok(NULL, " ");
+    }
+
+    testReturn = prepare_expression(purpose, data->allowed_vars, data->allowed_vars_count, unknown_var);
+    if (testReturn == EXIT_UNKNOWN_VAR) {
+        error_code = EXIT_UNKNOWN_VAR;
+        goto input_parsing_fail_purpose_expr;
+    }
+    else if (testReturn == EXIT_SYNTAX_ERROR) {
+        error_code = EXIT_SYNTAX_ERROR;
+        goto input_parsing_fail_purpose_expr;
+    }
+
+    queue = parse_to_rpn(purpose);
+    if (!queue) {
+        error_code = EXIT_SYNTAX_ERROR;
+        goto input_parsing_fail_purpose_expr;
+    }
+
+    testReturn = rpn_evaluate(queue, data->allowed_vars_count, &(data->purpose_expr));
+    if (testReturn == EXIT_FAILURE) {
+        error_code = EXIT_SYNTAX_ERROR;
+        goto input_parsing_fail_purpose_expr;
+    }
+
+
+
+    for (i = 0; i < data->subjects_count; ++i) {
+        if (strstr(subjects[i], "<=")) {
+            data->subjects_op[i] = -1;
+            replace_substr(subjects[i], "<=", "|");
+        } else if (strstr(subjects[i], ">=")) {
+            data->subjects_op[i] = 1;
+            replace_substr(subjects[i], ">=", "|");
+        } else if (strstr(subjects[i], "=")) {
+            data->subjects_op[i] = 0;
+            replace_substr(subjects[i], "=", "|");
+        } else {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_subject_op_expr;
+        }
+    }
+
+    for (i = 0; i < data->bounds_count; ++i) {
+        if (strstr(bounds[i], "<=")) {
+            data->bounds_op[i] = -1;
+            replace_substr(bounds[i], "<=", "|");
+        } else if (strstr(bounds[i], ">=")) {
+            data->bounds_op[i] = 1;
+            replace_substr(bounds[i], ">=", "|");
+        } else if (strstr(bounds[i], "=")) {
+            data->bounds_op[i] = 0;
+            replace_substr(bounds[i], "=", "|");
+        } else {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_bounds_op_expr;
+        }
+    }
+
+    for (i = 0; i < data->subjects_count; i++) {
+        token = strtok(subjects[i], "|");
+        strcpy(buffer, token);
+        
+        testReturn = prepare_expression(buffer, data->allowed_vars, data->allowed_vars_count, unknown_var);
+        if (testReturn == EXIT_UNKNOWN_VAR) {
+            error_code = EXIT_UNKNOWN_VAR;
+            goto input_parsing_fail_subject_expr;
+        }
+        else if (testReturn == EXIT_SYNTAX_ERROR) {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_subject_expr;
+        }
+
+        queue = parse_to_rpn(buffer);
+        if (!queue) {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_subject_expr;
+        }
+        testReturn = rpn_evaluate(queue, data->allowed_vars_count, &expr1);
+        if (testReturn == EXIT_FAILURE) {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_subject_expr;
+        }
+
+
+        token = strtok(NULL, "|");
+        strcpy(buffer, token);
+        testReturn = prepare_expression(buffer, data->allowed_vars, data->allowed_vars_count, unknown_var);
+        if (testReturn == EXIT_UNKNOWN_VAR) {
+            error_code = EXIT_UNKNOWN_VAR;
+            goto input_parsing_fail_subject_expr;
+        }
+        else if (testReturn == EXIT_SYNTAX_ERROR) {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_subject_expr;
+        }
+
+        queue = parse_to_rpn(buffer);
+        if (!queue) {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_subject_expr;
+        }
+        testReturn = rpn_evaluate(queue, data->allowed_vars_count, &expr2);
+
+        exprResult = sub_evaluation_expressions(expr1, expr2);
+
+        data->subjects_expr[i] = exprResult;
+    }
+
+    for (i = 0; i < data->bounds_count; i++) {
+        token = strtok(bounds[i], "|");
+        strcpy(buffer, token);
+        
+        testReturn = prepare_expression(buffer, data->allowed_vars, data->allowed_vars_count, unknown_var);
+        if (testReturn == EXIT_UNKNOWN_VAR) {
+            error_code = EXIT_UNKNOWN_VAR;
+            goto input_parsing_fail_bound_expr;
+        }
+        else if (testReturn == EXIT_SYNTAX_ERROR) {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_bound_expr;
+        }
+
+        queue = parse_to_rpn(buffer);
+        if (!queue) {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_bound_expr;
+        }
+        testReturn = rpn_evaluate(queue, data->allowed_vars_count, &expr1);
+        if (testReturn == EXIT_FAILURE) {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_bound_expr;
+        }
+
+
+        token = strtok(NULL, "|");
+        strcpy(buffer, token);
+        testReturn = prepare_expression(buffer, data->allowed_vars, data->allowed_vars_count, unknown_var);
+        if (testReturn == EXIT_UNKNOWN_VAR) {
+            error_code = EXIT_UNKNOWN_VAR;
+            goto input_parsing_fail_bound_expr;
+        }
+        else if (testReturn == EXIT_SYNTAX_ERROR) {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_bound_expr;
+        }
+
+        queue = parse_to_rpn(buffer);
+        if (!queue) {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_bound_expr;
+        }
+        testReturn = rpn_evaluate(queue, data->allowed_vars_count, &expr2);
+
+        exprResult = sub_evaluation_expressions(expr1, expr2);
+
+        data->bounds_expr[i] = exprResult;
+    }
+
+input_parsing_fail_bound_expr:
+input_parsing_fail_subject_expr:
+input_parsing_fail_bounds_op_expr:
+input_parsing_fail_subject_op_expr:
+input_parsing_fail_purpose_expr:
+input_parsing_fail_data_alloc:
+input_parsing_fail_unknown_line:
+input_parsing_fail_bounds_item_malloc:
+    for (i = 0; i < MAX_LINES; i++) {
+            if (bounds[i]) {
+                free(bounds[i]);
+            }
+    }
+    free(bounds);
+input_parsing_fail_bounds_malloc:
+input_parsing_fail_subject_item_malloc:
+    for (i = 0; i < MAX_LINES; i++) {
+        if (subjects[i]) {
+            free(subjects[i]);
+        }
+    }
+    free(subjects);
+input_parsing_fail_subjects_malloc:
+    free(generals);
+input_parsing_fail_generals_malloc:
+    free(purpose);
+input_parsing_fail_purpose_malloc:
+    free(buffer);
+input_parsing_fail_buffer_malloc:
+    fclose(file);
+input_parsing_fail_input_file:
+
+    return error_code;
 }

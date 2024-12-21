@@ -221,3 +221,19 @@ void matrix_transpose(struct matrix *mat) {
         }
     }
 }
+
+int is_column_zero(const struct matrix *mat, size_t col) {
+    size_t i;
+
+    if (!mat || !mat->items || col >= mat->cols) {
+        return 0;
+    }
+
+    for (i = 0; i < mat->rows; ++i) {
+        if (matrix_get(mat, i, col) != 0.0) {
+            return 0;
+        }
+    }
+
+    return 1;
+}

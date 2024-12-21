@@ -1,4 +1,10 @@
 #include "matrix.h"
+#include "parser.h"
+
+#define EXIT_OBJECTIVE_UNBOUNDED 20
+#define EXIT_OBJECTIVE_INFEASIBLE 21
+
+#define THE_BIG_M 1000.0
 
 /**
  * \brief Procedura provede normalizaci řádku `row` matice `mat` podle sloupce `col`.
@@ -6,7 +12,7 @@
  * \param row Index řádku matice.
  * \param col Index sloupce matice.
  */
-void _matrix_normalize_row_by_col(struct matrix *mat, size_t row, size_t col);
+int _matrix_normalize_row_by_col(struct matrix *mat, size_t row, size_t col);
 
 /**
  * \brief Procedura provede pivotaci matice `mat` podle řádku `row` a sloupce `col`.
@@ -14,7 +20,7 @@ void _matrix_normalize_row_by_col(struct matrix *mat, size_t row, size_t col);
  * \param row Index řádku matice.
  * \param col Index sloupce matice.
  */
-void _matrix_pivoting(struct matrix *mat, size_t row, size_t col);
+int _matrix_pivoting(struct matrix *mat, size_t row, size_t col);
 
 /**
  * \brief Funkce vrátí index řádku s nejmenším kvocientem.
@@ -39,10 +45,6 @@ int optimal_max_test(struct matrix *mat, size_t *base_vars, mat_num_type *object
  * \brief Funkce provede maximalizaci simplexové tabulky.
  * \param mat Ukazatel na instanci struktury `matrix`, nad kterou bude operace provedena.
  */
-int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object_to, mat_num_type *result, size_t real_vars_count);
+int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object_to, mat_num_type *result, size_t real_vars_count, size_t *not_valid_basis, size_t not_valid_basis_count);
 
-/**
- * \brief Funkce provede minimalizaci simplexové tabulky.
- * \param mat Ukazatel na instanci struktury `matrix`, nad kterou bude operace provedena.
- */
-void simplex_minimize(struct matrix *mat);
+int simplex(struct problem_data *data);
