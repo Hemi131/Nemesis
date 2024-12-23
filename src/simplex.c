@@ -18,7 +18,7 @@ int _matrix_normalize_row_by_col(struct matrix *mat, size_t row, size_t col) {
         return 0;
     }
 
-    for (i = 0; i < mat->cols; ++i) {
+    for (i = 0; i < mat->cols; i++) {
         matrix_set(mat, row, i, matrix_get(mat, row, i) / divider);
     }
 
@@ -37,14 +37,14 @@ int _matrix_pivoting(struct matrix *mat, size_t row, size_t col) {
         return 0;
     }
 
-    for (i = 0; i < mat->rows; ++i) {
+    for (i = 0; i < mat->rows; i++) {
         if (i == row) {
             continue;
         }
 
         multiplier = matrix_get(mat, i, col);
 
-        for (j = 0; j < mat->cols; ++j) {
+        for (j = 0; j < mat->cols; j++) {
             matrix_set(mat, i, j, matrix_get(mat, i, j) - multiplier * matrix_get(mat, row, j));
         }
     }
@@ -62,7 +62,7 @@ int _smallest_quotient_row_index(const struct matrix *mat, size_t col, size_t *r
 
     have_first_candidate = 0;
 
-    for (i = 0; i < mat->rows; ++i) {
+    for (i = 0; i < mat->rows; i++) {
         test = matrix_get(mat, i, mat->cols - 1) / matrix_get(mat, i, col);
 
         if (test > 0) {
@@ -95,10 +95,10 @@ int optimal_max_test(struct matrix *mat, size_t *base_vars, mat_num_type *object
     }
 
     max_value = -THE_BIG_M * THE_BIG_M;
-    for (col_index = 0; col_index < mat->cols - 1; ++col_index) {
+    for (col_index = 0; col_index < mat->cols - 1; col_index++) {
         test_value = object_to[col_index];
 
-        for (row_index = 0; row_index < mat->rows; ++row_index) {
+        for (row_index = 0; row_index < mat->rows; row_index++) {
             test_value -= matrix_get(mat, row_index, col_index) * object_to[base_vars[row_index]];
         }
 
@@ -125,8 +125,8 @@ int optimal_max_test(struct matrix *mat, size_t *base_vars, mat_num_type *object
 int simplex_valid_base(struct matrix *mat, size_t *base_vars, size_t not_valid_basis_count, size_t *not_valid_basis) {
     size_t i, j;
 
-    for (i = 0; i < mat->rows; ++i) {
-        for (j = 0; j < not_valid_basis_count; ++j) {
+    for (i = 0; i < mat->rows; i++) {
+        for (j = 0; j < not_valid_basis_count; j++) {
             if (base_vars[i] == not_valid_basis[j]) {
                 return 0;
             }
@@ -137,13 +137,15 @@ int simplex_valid_base(struct matrix *mat, size_t *base_vars, size_t not_valid_b
 }
 
 int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object_to, mat_num_type *result, size_t real_vars_count, size_t *not_valid_basis, size_t not_valid_basis_count) {
-    size_t smallest_quotient_row, smallest_quotient_col, row_index, i;
+    size_t smallest_quotient_row, smallest_quotient_col, row_index, i, iterations_count;
     
     if (!mat || !mat->items || !base_vars || !object_to) {
         return -2;
     }
 
-   while ((!optimal_max_test(mat, base_vars, object_to, &smallest_quotient_col)) || !simplex_valid_base(mat, base_vars, not_valid_basis_count, not_valid_basis)) {
+    iterations_count = 0;
+
+   while ((!optimal_max_test(mat, base_vars, object_to, &smallest_quotient_col) || !simplex_valid_base(mat, base_vars, not_valid_basis_count, not_valid_basis)) && iterations_count++ < MAX_ITERATIONS_COUNT) {
         if (!_smallest_quotient_row_index(mat, smallest_quotient_col, &smallest_quotient_row)) {
             return EXIT_OBJECTIVE_UNBOUNDED;
         }
@@ -160,16 +162,20 @@ int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object
             result[i] = 0.0;
         }
 
-        for (row_index = 0; row_index < mat->rows; ++row_index) {
+        for (row_index = 0; row_index < mat->rows; row_index++) {
             if (base_vars[row_index] >= real_vars_count) {
                 continue;
             }
             result[base_vars[row_index]] = matrix_get(mat, row_index, mat->cols - 1);
-/*             printf("result[%lu] = %f\n", base_vars[row_index], result[base_vars[row_index]]); */
+            /* printf("result[%lu] = %f\n", base_vars[row_index], result[base_vars[row_index]]); */
         }
     }
 
     /* matrix_print(mat); */
+
+    if (!simplex_valid_base(mat, base_vars, not_valid_basis_count, not_valid_basis)) {
+        return EXIT_OBJECTIVE_INFEASIBLE;
+    }
 
     return 0;
 }
@@ -183,6 +189,44 @@ int simplex(struct problem_data *data) {
     mat_num_type *object_to;
     size_t *base_vars, base_vars_index, *not_valid_basis, not_valid_basis_count;
 
+    for (i = 0; i < data->subjects_count; i++) {
+        if ((data->subjects_expr[i]).constant > 0.0) {
+            for (j = 0; j < data->allowed_vars_count; j++) {
+                (data->subjects_expr[i]).var_koeficients[j]   *= -1.0;
+            }
+            (data->subjects_expr[i]).constant *= -1.0;
+
+            data->subjects_op[i] *= -1;
+        }
+        else if ((data->subjects_expr[i]).constant == 0.0 && data->subjects_op[i] == 1) {
+            for (j = 0; j < data->allowed_vars_count; j++) {
+                (data->subjects_expr[i]).var_koeficients[j]   *= -1.0;
+            }
+            (data->subjects_expr[i]).constant *= -1.0;
+
+            data->subjects_op[i] *= -1;
+        }
+    }
+
+    for (i = 0; i < data->bounds_count; i++) {
+        if ((data->bounds_expr[i]).constant > 0.0) {
+            for (j = 0; j < data->allowed_vars_count; j++) {
+                (data->bounds_expr[i]).var_koeficients[j]   *= -1.0;
+            }
+            (data->bounds_expr[i]).constant *= -1.0;
+
+            data->bounds_op[i] *= -1;
+        }
+        else if ((data->bounds_expr[i]).constant == 0.0 && data->bounds_op[i] == 1) {
+            for (j = 0; j < data->allowed_vars_count; j++) {
+                (data->bounds_expr[i]).var_koeficients[j]   *= -1.0;
+            }
+            (data->bounds_expr[i]).constant *= -1.0;
+
+            data->bounds_op[i] *= -1;
+        }
+    }
+
     cols_count = data->allowed_vars_count + 1; /* +1 for constant */
     for (i = 0; i < data->subjects_count; i++) {
         if (data->subjects_op[i] == 1) {
@@ -192,16 +236,16 @@ int simplex(struct problem_data *data) {
             cols_count += 1;
         }
     }
-    /* for (i = 0; i < data->bounds_count; i++) {
+    for (i = 0; i < data->bounds_count; i++) {
         if (data->bounds_op[i] == 1) {
             cols_count += 2;
         }
         else {
             cols_count += 1;
         }
-    } */
+    }
 
-    mat = matrix_allocate(data->subjects_count /* + data->bounds_count */, cols_count, 0.0);
+    mat = matrix_allocate(data->subjects_count + data->bounds_count, cols_count, 0.0);
     if (!mat) {
         error_code = EXIT_MALLOC_ERROR;
         goto simplex_matrix_malloc_fail;
@@ -213,7 +257,7 @@ int simplex(struct problem_data *data) {
         goto simplex_object_to_malloc_fail;
     }
 
-    base_vars = malloc((data->subjects_count /* + data->bounds_count */) * sizeof(size_t));
+    base_vars = malloc((data->subjects_count + data->bounds_count) * sizeof(size_t));
     if (!base_vars) {
         error_code = EXIT_MALLOC_ERROR;
         goto simplex_base_vars_malloc_fail;
@@ -225,25 +269,25 @@ int simplex(struct problem_data *data) {
         goto simplex_not_valid_basis_malloc_fail;
     }
 
-    for (i = 0; i < data->subjects_count; ++i) {
-        for (j = 0; j < data->allowed_vars_count; ++j) {
+    for (i = 0; i < data->subjects_count; i++) {
+        for (j = 0; j < data->allowed_vars_count; j++) {
             matrix_set(mat, i, j, data->subjects_expr[i].var_koeficients[j]);
         }
         matrix_set(mat, i, cols_count - 1, -1.0 * data->subjects_expr[i].constant); /* kvůli přehození na druhou stranu */
     }
 
-    /* for (i = 0; i < data->bounds_count; ++i) {
-        for (j = 0; j < data->allowed_vars_count; ++j) {
+    for (i = 0; i < data->bounds_count; i++) {
+        for (j = 0; j < data->allowed_vars_count; j++) {
             matrix_set(mat, i + data->subjects_count, j, data->bounds_expr[i].var_koeficients[j]);
         }
-        matrix_set(mat, i + data->subjects_count, cols_count - 1, -1.0 * data->bounds_expr[i].constant);  kvůli přehození na druhou stranu 
-    } */
+        matrix_set(mat, i + data->subjects_count, cols_count - 1, -1.0 * data->bounds_expr[i].constant);  /* kvůli přehození na druhou stranu  */
+    }
 
     if (data->problem_type == MINIMIZE) {
         problem_type_coeficient = -1.0;
     }
 
-    for (i = 0; i < data->purpose_expr.var_count; ++i) {
+    for (i = 0; i < data->purpose_expr.var_count; i++) {
         object_to[i] = problem_type_coeficient * data->purpose_expr.var_koeficients[i];
     }
 
@@ -251,11 +295,10 @@ int simplex(struct problem_data *data) {
     base_vars_index = 0;
     not_valid_basis_count = 0;
     j = data->allowed_vars_count;
-    for (i = 0; i < data->subjects_count; ++i) {
+    for (i = 0; i < data->subjects_count; i++) {
         if (data->subjects_op[i] == 1) {
             matrix_set(mat, i, j, -1.0);
             object_to[j] = 0.0;
-            /* not_valid_basis[not_valid_basis_count++] = j; */
             j++;
             matrix_set(mat, i, j, 1.0);
             object_to[j] = -M;
@@ -278,7 +321,7 @@ int simplex(struct problem_data *data) {
         }
     }
 
-    /* for (i = 0; i < data->bounds_count; ++i) {
+    for (i = 0; i < data->bounds_count; i++) {
         if (data->bounds_op[i] == 1) {
             matrix_set(mat, i + data->subjects_count, j, -1.0);
             object_to[j] = 0.0;
@@ -303,7 +346,7 @@ int simplex(struct problem_data *data) {
             not_valid_basis[not_valid_basis_count++] = j;
             j++;
         }
-    } */
+    }
 
     for (i = 0; i < data->allowed_vars_count; i++) {
         if (is_column_zero(mat, i)) {
@@ -312,7 +355,6 @@ int simplex(struct problem_data *data) {
     }
 
     error_code = simplex_maximize(mat, base_vars, object_to, data->result, data->allowed_vars_count, not_valid_basis, not_valid_basis_count);
- /* TODO: kontrola error kodu */
     
     free(not_valid_basis);
 simplex_not_valid_basis_malloc_fail:

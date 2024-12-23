@@ -7,6 +7,7 @@
 #define UNUSED_VAR 1
 
 #define THE_BIG_M 1000.0
+#define MAX_ITERATIONS_COUNT 100
 
 /**
  * \brief Procedura provede normalizaci řádku `row` matice `mat` podle sloupce `col`.
@@ -42,6 +43,8 @@ int _smallest_quotient_row_index(const struct matrix *mat, size_t col, size_t *r
  * \return int 1, pokud je test optimality splněn, jinak 0.
  */
 int optimal_max_test(struct matrix *mat, size_t *base_vars, mat_num_type *object_to, size_t *col_to_optimize);
+
+int simplex_valid_base(struct matrix *mat, size_t *base_vars, size_t not_valid_basis_count, size_t *not_valid_basis);
 
 /**
  * \brief Funkce provede maximalizaci simplexové tabulky.

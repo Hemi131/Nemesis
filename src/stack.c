@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-/* TODO */
 
 struct stack *stack_alloc(const size_t capacity, const size_t item_size) {
     struct stack *new_stack = malloc(sizeof(struct stack));

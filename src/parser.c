@@ -61,7 +61,7 @@ int remove_substr(char *str, const char *substr) {
 int can_be_var(const char *str) {
     size_t i;
 
-    for (i = 0; str[i] != '\0'; ++i) {
+    for (i = 0; str[i] != '\0'; i++) {
         if ((str[i] == '+' || str[i] == '-' || str[i] == '*' || str[i] == '/' || str[i] == '(' || str[i] == ')' || str[i] == '{' || str[i] == '}' || str[i] == '.' || str[i] == ':' || str[i] == '<' || str[i] == '>' || str[i] == '=')) {
             return 0;
         }
@@ -74,7 +74,7 @@ int check_valid_chars(const char *str, char *unknown_var) {
     size_t i;
     int error = 0;
 
-    for (i = 0; str[i] != '\0'; ++i) {
+    for (i = 0; str[i] != '\0'; i++) {
         if (!((str[i] >= '0' && str[i] <= '9') || str[i] == '+' || str[i] == '-' || str[i] == '*' || str[i] == '/' || str[i] == '(' || str[i] == ')' || str[i] == '{' || str[i] == '}' || str[i] == '.')) {
             strcpy(unknown_var, str + i);
             error = 1;
@@ -83,7 +83,7 @@ int check_valid_chars(const char *str, char *unknown_var) {
     }
 
     if (error) {
-        for (i = 0; unknown_var[i] != '\0'; ++i) {
+        for (i = 0; unknown_var[i] != '\0'; i++) {
             if ((unknown_var[i] == '+' || unknown_var[i] == '-' || unknown_var[i] == '*' || unknown_var[i] == '/' || unknown_var[i] == '(' || unknown_var[i] == ')' || unknown_var[i] == '{' || unknown_var[i] == '}' || unknown_var[i] == '.')) {
                 unknown_var[i] = '\0';
                 break;
@@ -184,8 +184,8 @@ int replace_substr_with_end(char *str, const char *substr) {
 void sort_str_by_len(char *arr[], size_t n) {
     size_t i, j;
 
-    for (i = 0; i < n - 1; ++i) {
-        for (j = 0; j < n - i - 1; ++j) {
+    for (i = 0; i < n - 1; i++) {
+        for (j = 0; j < n - i - 1; j++) {
             if (strlen(arr[j]) < strlen(arr[j + 1])) {
                 char *temp = arr[j];
                 arr[j] = arr[j + 1];
@@ -207,8 +207,8 @@ int replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
     memcpy(vars_sorted, vars, vars_count * sizeof(char *));
     sort_str_by_len(vars_sorted, vars_count);
 
-    for (i = 0; i < vars_count; ++i) {
-        for (j = 0; j < vars_count; ++j) {
+    for (i = 0; i < vars_count; i++) {
+        for (j = 0; j < vars_count; j++) {
             if (strcmp(vars[j], vars_sorted[i]) == 0) {
                 break;
             }
@@ -270,7 +270,7 @@ int check_brackets(const char *str) {
         return 0;
     }
 
-    for (i = 0; str[i] != '\0'; ++i) {
+    for (i = 0; str[i] != '\0'; i++) {
         switch (str[i]) {
             case '(':
             case '{':
@@ -315,7 +315,7 @@ void change_brackets(char *str) {
         return;
     }
 
-    for (i = 0; str[i] != '\0'; ++i) {
+    for (i = 0; str[i] != '\0'; i++) {
         switch (str[i]) {
             case '{':
             case '[':
@@ -409,7 +409,7 @@ struct evaluation_expression add_evaluation_expressions(struct evaluation_expres
 
     if (expr1.var_count || expr2.var_count) {
         new_expr.var_count = expr1.var_count > expr2.var_count ? expr1.var_count : expr2.var_count;
-        for (i = 0; i < new_expr.var_count; ++i) {
+        for (i = 0; i < new_expr.var_count; i++) {
             new_expr.var_koeficients[i] = expr1.var_koeficients[i] + expr2.var_koeficients[i];
         }
     }
@@ -429,13 +429,13 @@ struct evaluation_expression multiply_evaluation_expressions(struct evaluation_e
     }
     else if (expr1.var_count && !expr2.var_count) {
         new_expr.var_count = expr1.var_count > expr2.var_count ? expr1.var_count : expr2.var_count;
-        for (i = 0; i < new_expr.var_count; ++i) {
+        for (i = 0; i < new_expr.var_count; i++) {
             new_expr.var_koeficients[i] = expr1.var_koeficients[i] * expr2.constant;
         }
     }
     else if (!expr1.var_count && expr2.var_count) {
         new_expr.var_count = expr1.var_count > expr2.var_count ? expr1.var_count : expr2.var_count;
-        for (i = 0; i < new_expr.var_count; ++i) {
+        for (i = 0; i < new_expr.var_count; i++) {
             new_expr.var_koeficients[i] = expr2.var_koeficients[i] * expr1.constant;
         }
     }
@@ -455,7 +455,7 @@ struct evaluation_expression sub_evaluation_expressions(struct evaluation_expres
 
     if (expr1.var_count || expr2.var_count) {
         new_expr.var_count = expr1.var_count > expr2.var_count ? expr1.var_count : expr2.var_count;
-        for (i = 0; i < new_expr.var_count; ++i) {
+        for (i = 0; i < new_expr.var_count; i++) {
             new_expr.var_koeficients[i] = expr1.var_koeficients[i] - expr2.var_koeficients[i];
         }
     }
@@ -483,7 +483,7 @@ struct evaluation_expression divide_evaluation_expressions(struct evaluation_exp
 
     if (expr1.var_count) {
         new_expr.var_count = expr1.var_count;
-        for (i = 0; i < new_expr.var_count; ++i) {
+        for (i = 0; i < new_expr.var_count; i++) {
             new_expr.var_koeficients[i] = expr1.var_koeficients[i] / expr2.constant;
         }
     }
@@ -530,7 +530,7 @@ struct queue *parse_to_rpn(const char *str) {
     }
 
     last_rpn_item.type = '0';
-    for (i = 0; str[i] != '\0'; ++i) {
+    for (i = 0; str[i] != '\0'; i++) {
         switch (str[i]) {
             case '(':
                 if (last_rpn_item.type == 'd' || (last_rpn_item.type == 'b' && last_rpn_item.data.bracket == ')')) {
@@ -605,7 +605,7 @@ struct queue *parse_to_rpn(const char *str) {
                     }
                 }
 
-                for (j = 1; str[i + j] != '}'; ++j) {
+                for (j = 1; str[i + j] != '}'; j++) {
                     buffer[j - 1] = str[i + j];
                 }
                 buffer[j - 1] = '\0';
@@ -625,7 +625,7 @@ struct queue *parse_to_rpn(const char *str) {
                 i += j;
                 break;
             default:
-                for (j = 0; (str[i + j] >= '0' && str[i + j] <= '9') || str[i + j] == '.'; ++j) {
+                for (j = 0; (str[i + j] >= '0' && str[i + j] <= '9') || str[i + j] == '.'; j++) {
                     buffer[j] = str[i + j];
                 }
 
@@ -937,7 +937,7 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
     int found_maximize = 0;
     int found_minimize = 0;
 
-    size_t i, j;
+    size_t i;
     char *token;
     struct queue *queue;
     struct evaluation_expression expr1, expr2, exprResult;
@@ -1138,7 +1138,7 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
 
 
 
-    for (i = 0; i < data->subjects_count; ++i) {
+    for (i = 0; i < data->subjects_count; i++) {
         if (strstr(subjects[i], "<=")) {
             data->subjects_op[i] = -1;
             replace_substr(subjects[i], "<=", "|");
@@ -1154,7 +1154,7 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
         }
     }
 
-    for (i = 0; i < data->bounds_count; ++i) {
+    for (i = 0; i < data->bounds_count; i++) {
         if (strstr(bounds[i], "<=")) {
             data->bounds_op[i] = -1;
             replace_substr(bounds[i], "<=", "|");
@@ -1218,17 +1218,6 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
         exprResult = sub_evaluation_expressions(expr1, expr2);
 
         data->subjects_expr[i] = exprResult;
-    }
-
-    for (i = 0; i < data->subjects_count; i++) {
-        if ((data->subjects_expr[i]).constant > 0.0) {
-            for (j = 0; j < data->allowed_vars_count; j++) {
-                (data->subjects_expr[i]).var_koeficients[j]   *= -1.0;
-            }
-            (data->subjects_expr[i]).constant *= -1.0;
-
-            data->subjects_op[i] *= -1;
-        }
     }
 
     for (i = 0; i < data->bounds_count; i++) {

@@ -201,27 +201,6 @@ void matrix_move(struct matrix **target, struct matrix **source) {
     *source = NULL;
 }
 
-void matrix_transpose(struct matrix *mat) {
-    mat_num_type temp;
-    size_t r, c;
-
-    if (!mat || !mat->items) {
-        return;
-    }
-
-    if (mat->rows != mat->cols) {
-        return;
-    }
-
-    for (r = 0; r < mat->rows; ++r) {
-        for (c = 0; c < mat->cols; ++c) {
-            temp = matrix_get(mat, r, c);
-            matrix_set(mat, r, c, matrix_get(mat, c, r));
-            matrix_set(mat, c, r, temp);
-        }
-    }
-}
-
 int is_column_zero(const struct matrix *mat, size_t col) {
     size_t i;
 
