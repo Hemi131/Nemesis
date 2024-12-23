@@ -7,37 +7,22 @@
 #include "matrix.h"
 #include "simplex.h"
 
-void print_array(char *arr[], size_t n) {
+/**
+ * \brief Funkce vytiskne výsledky na výstup specifikovaný v *outputfile, pokud NULL, vytiskne se na stdout.
+ * \param `*output_file` Ukazatel na řetězec s cestou k souboru.
+ * \param `*data` Ukazatel na data LP úlohy.
+ * \return EXIT_SUCCESS, pokud proběhlo v pořádku, jinak kód chyby.
+ */
+int printResults(char *output_file, struct problem_data *data) {
+    FILE *file;
     size_t i;
-    for (i = 0; i < n; ++i) {
-        printf("%s\n", arr[i]);
-    }
-}
 
-void print_array_d(int arr[], size_t n) {
-    size_t i;
-    for (i = 0; i < n; ++i) {
-        printf("%d\n", arr[i]);
+    if (output_file) {
+        file = fopen(output_file, "w");
     }
-}
-
-void print_array_f(mat_num_type arr[], size_t n) {
-    size_t i;
-    for (i = 0; i < n; ++i) {
-        printf("%f\n", arr[i]);
+    else {
+        file = stdout;
     }
-}
-
-void print_array_lu(size_t arr[], size_t n) {
-    size_t i;
-    for (i = 0; i < n; ++i) {
-        printf("%lu\n", arr[i]);
-    }
-}
-
-int printResultsToFile(char *output_file, struct problem_data *data) {
-    FILE *file = fopen(output_file, "w");
-    size_t i;
 
     if (!file) {
         return EXIT_INVALID_OUTPUT_FILE;
@@ -51,10 +36,18 @@ int printResultsToFile(char *output_file, struct problem_data *data) {
         }
     }
 
-    fclose(file);
+    if (output_file) {
+        fclose(file);
+    }
     return EXIT_SUCCESS;
 }
 
+/**
+ * \brief Vstupní bod programu.
+ * \param `argc` Počet argumentů.
+ * \param `*argv[]` Pole argumentů.
+ * \return EXIT_SUCCESS, pokud proběhlo v pořádku, jinak kód chyby.
+ */
 int main(int argc, char *argv[]) {
     int error_code = 0;
     char *input_file;
@@ -66,35 +59,41 @@ int main(int argc, char *argv[]) {
 
     size_t i;
 
+/* ARGS PARSING */
+
     error_code = args_parser(argc, argv, &input_file, &output_file);
 
     if (error_code == EXIT_INVALID_INPUT_FILE) {
         printf("Input file not found!\n");
-        goto fail_args;
+        goto main_free;
     }
     else if (error_code == EXIT_INVALID_OUTPUT_FILE) {
         printf("Invalid output destination!\n");
-        goto fail_args;
+        goto main_free;
     }
+
+/* INPUT PARSING */
 
     error_code = input_parser(input_file, &data, unknown_var);
 
     if (error_code == EXIT_INVALID_INPUT_FILE) {
         printf("Input file not found!\n");
-        goto fail_args;
+        goto main_free;
     }
     else if (error_code == EXIT_SYNTAX_ERROR) {
         printf("Syntax error!\n");
-        goto fail_args;
+        goto main_free;
     }
     else if (error_code == EXIT_MALLOC_ERROR) {
         printf("Memory allocation error!\n");
-        goto fail_args;
+        goto main_free;
     }
     else if (error_code == EXIT_UNKNOWN_VAR) {
         printf("Unknown variable '%s'!\n", unknown_var);
-        goto fail_args;
+        goto main_free;
     }
+
+/* USE OF SIMPLEX */
 
     error_code = simplex(data);
 
@@ -111,23 +110,15 @@ int main(int argc, char *argv[]) {
         printf("No feasible solution exists.\n");
     }
     else if (error_code == EXIT_SUCCESS) {
-        if (output_file) {
-            error_code = printResultsToFile(output_file, data);
-            if (error_code == EXIT_INVALID_OUTPUT_FILE) {
-                printf("Invalid output destination!\n");
-                goto fail_args;
-            }
-        }
-        else {
-            for (i = 0; i < data->allowed_vars_count; ++i) {
-                if (data->unused_vars[i] != UNUSED_VAR) {
-                    printf("%s = %f\n", data->allowed_vars[i], data->result[i]);
-                }
-            }
+        error_code = printResults(output_file, data);
+        if (error_code == EXIT_INVALID_OUTPUT_FILE) {
+            printf("Invalid output destination!\n");
         }
     }
 
-fail_args:
+/* FREE */
+
+main_free:
     problem_data_dealloc(data);
     return error_code;
 }

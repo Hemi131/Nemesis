@@ -1,7 +1,7 @@
 #include "parser.h"
+
 #include <string.h>
 #include <stdlib.h>
-
 #include <stdio.h>
 
 int args_parser(int argc, char *argv[], char **input_file, char **output_file) {
@@ -95,39 +95,7 @@ int check_valid_chars(const char *str, char *unknown_var) {
     return 1;
 }
 
-int replace_substr1(char *str, const char *substr, const char *replacement) {
-    char *pos, *temp;
-    size_t len = strlen(substr);
-    size_t count = 0;
-
-    temp = malloc(MAX_CHARS);
-    if (!temp) {
-        return EXIT_FAILURE;
-    }
-
-    pos = strstr(str, substr);
-    while (pos != NULL && (count++ < 100)) {
-        strncpy(temp, str, pos - str);
-        temp[pos - str] = '\0';
-
-        strcat(temp, replacement);
-        strcat(temp, pos + len);
-
-        strcpy(str, temp);
-
-        pos = strstr(str, substr);
-    }
-
-    if (count >= 100) {
-        free(temp);
-        return EXIT_FAILURE;
-    }
-
-    free(temp);
-    return EXIT_SUCCESS;
-}
-
-int replace_substr(char* str, const char* substr, const char* replacement) {
+void replace_substr(char* str, const char* substr, const char* replacement) {
     char ans[MAX_CHARS] = { 0 };
     int ans_idx = 0;
     size_t i, j, k, l;
@@ -167,18 +135,15 @@ int replace_substr(char* str, const char* substr, const char* replacement) {
     }
 
     strcpy(str, ans);
-    return EXIT_SUCCESS;
 }
 
-int replace_substr_with_end(char *str, const char *substr) {
+void replace_substr_with_end(char *str, const char *substr) {
     char *pos;
 
     pos = strstr(str, substr);
     if (pos != NULL) {
         pos[0] = '\0';
     }
-
-    return EXIT_SUCCESS;
 }
 
 void sort_str_by_len(char *arr[], size_t n) {
@@ -195,14 +160,14 @@ void sort_str_by_len(char *arr[], size_t n) {
     }
 }
 
-int replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
+void replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
     size_t i, j;
     char buffer[MAX_CHARS];
     char **vars_sorted;
 
     vars_sorted = malloc(vars_count * sizeof(char *));
     if (!vars_sorted) {
-        return EXIT_MALLOC_ERROR;
+        return;
     }
     memcpy(vars_sorted, vars, vars_count * sizeof(char *));
     sort_str_by_len(vars_sorted, vars_count);
@@ -215,15 +180,10 @@ int replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
         }
 
         sprintf(buffer, "{%lu}", j);
-        if (replace_substr(str, vars_sorted[i], buffer)) {
-            free(vars_sorted);
-            return 0;
-        }
+        replace_substr(str, vars_sorted[i], buffer);
     }
 
     free(vars_sorted);
-
-    return 1;
 }
 
 int prepare_expression(char *str, char **vars, const size_t vars_count, char* unknown_var) {
@@ -233,9 +193,7 @@ int prepare_expression(char *str, char **vars, const size_t vars_count, char* un
 
     change_brackets(str);
 
-    if (!replace_vars_by_index(str, vars, vars_count)) {
-        return EXIT_SYNTAX_ERROR;
-    }
+    replace_vars_by_index(str, vars, vars_count);
 
     if (!remove_substr(str, " ")) {
         return EXIT_SYNTAX_ERROR;
@@ -252,7 +210,7 @@ int prepare_expression(char *str, char **vars, const size_t vars_count, char* un
         return EXIT_SYNTAX_ERROR;
     }
 
-    return 1;
+    return EXIT_SUCCESS;
 }
 
 int check_brackets(const char *str) {
@@ -439,9 +397,8 @@ struct evaluation_expression multiply_evaluation_expressions(struct evaluation_e
             new_expr.var_koeficients[i] = expr2.var_koeficients[i] * expr1.constant;
         }
     }
-    else
-    {
-        printf("Error: multiplication of two variables is not supported\n"); /* #TODO: error handling */
+    else {
+        printf("Error: multiplication of two variables is not supported\n");
     }
     
     return new_expr;
@@ -469,13 +426,11 @@ struct evaluation_expression divide_evaluation_expressions(struct evaluation_exp
 
     if (expr2.var_count) {
         printf("Error: division by variable is not supported.\n");
-        exit(EXIT_FAILURE); /* TODO: error handling */
         return new_expr;
     }
 
     if (expr2.constant == 0) {
-        printf("Error: division by zero\n");
-        exit(EXIT_FAILURE); /* TODO: error handling */
+        printf("Error: division by zero in evaluation expression!\n");
         return new_expr;
     }
 
@@ -662,16 +617,16 @@ struct queue *parse_to_rpn(const char *str) {
     goto end;
 
 stack_failed:
-    printf("stack failed\n");
+    printf("RPN: stack failed\n");
     goto end;
 wrong_number:
-    printf("wrong number\n");
+    printf("RPN: wrong number\n");
     goto end;
 queue_failed:
-    printf("queue failed\n");
+    printf("RPN: queue failed\n");
     goto end;
 bad_character:
-    printf("bad character\n");
+    printf("RPN: bad character\n");
 end:
     free(buffer);
     stack_dealloc(&s);
@@ -1075,8 +1030,6 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
         }
   
         else {
-            /* TODO: odebrat tohle vypsani */
-            printf("Unknown line: %s\n", buffer);
             error_code = EXIT_SYNTAX_ERROR;
             goto input_parsing_fail_unknown_line;
         }
@@ -1084,8 +1037,6 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
     }
 
     if ((found_maximize && found_minimize) || (!found_maximize && !found_minimize)) {
-            /* TODO: odebrat tohle vypsani */
-            printf("Error: Objective not found or multiple objectives found\n");
             return EXIT_SYNTAX_ERROR;
         }
 

@@ -1,7 +1,9 @@
-/* https://math.libretexts.org/Bookshelves/Applied_Mathematics/Applied_Finite_Mathematics_(Sekhon_and_Bloom)/04%3A_Linear_Programming_The_Simplex_Method/4.02%3A_Maximization_By_The_Simplex_Method */
 #include "simplex.h"
 
+#ifdef SIMPLEX_DEBUG
 #include <stdio.h>
+#endif
+
 #include <stdlib.h>
 
 int _matrix_normalize_row_by_col(struct matrix *mat, size_t row, size_t col) {
@@ -102,7 +104,9 @@ int optimal_max_test(struct matrix *mat, size_t *base_vars, mat_num_type *object
             test_value -= matrix_get(mat, row_index, col_index) * object_to[base_vars[row_index]];
         }
 
-        /* printf("Test value: %f\n", test_value); */
+        #ifdef SIMPLEX_DEBUG
+        printf("Test value: %f\n", test_value);
+        #endif
 
         if (test_value == 0.0) {
             continue;
@@ -151,8 +155,10 @@ int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object
         }
         base_vars[smallest_quotient_row] = smallest_quotient_col;
 
-        /* printf("Pivot row: %lu, Pivot col: %lu\n", smallest_quotient_row, smallest_quotient_col);
-        matrix_print(mat); */
+        #ifdef SIMPLEX_DEBUG
+        printf("Pivot row: %lu, Pivot col: %lu\n", smallest_quotient_row, smallest_quotient_col);
+        matrix_print(mat);
+        #endif
 
         if (!_matrix_pivoting(mat, smallest_quotient_row, smallest_quotient_col)) {
             return EXIT_OBJECTIVE_INFEASIBLE;
@@ -167,17 +173,22 @@ int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object
                 continue;
             }
             result[base_vars[row_index]] = matrix_get(mat, row_index, mat->cols - 1);
-            /* printf("result[%lu] = %f\n", base_vars[row_index], result[base_vars[row_index]]); */
+
+            #ifdef SIMPLEX_DEBUG
+            printf("result[%lu] = %f\n", base_vars[row_index], result[base_vars[row_index]]);
+            #endif
         }
     }
 
-    /* matrix_print(mat); */
+    #ifdef SIMPLEX_DEBUG
+    matrix_print(mat);
+    #endif
 
     if (!simplex_valid_base(mat, base_vars, not_valid_basis_count, not_valid_basis)) {
         return EXIT_OBJECTIVE_INFEASIBLE;
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int simplex(struct problem_data *data) {

@@ -10,8 +10,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-/* TODO */
-
 struct matrix *matrix_allocate(const size_t rows, const size_t cols, const mat_num_type i_val){
     struct matrix *new_mat;
 
