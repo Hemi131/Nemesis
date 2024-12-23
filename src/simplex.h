@@ -37,8 +37,8 @@ int _matrix_normalize_row_by_col(struct matrix *mat, size_t row, size_t col);
 int _matrix_pivoting(struct matrix *mat, size_t row, size_t col);
 
 /**
- * \brief Funkce vrátí index řádku s nejmenším kvocientem.
- * Kvocient je určen jako podíl hodnoty v posledním sloupci (konstanta, pravá strana rovnice) a hodnoty v zadaném sloupci.
+ * \brief Funkce vrátí index řádku s nejmenším koeficientem.
+ * Koeficient je určen jako podíl hodnoty v posledním sloupci (konstanta, pravá strana rovnice) a hodnoty v zadaném sloupci.
  * \param `*mat` Ukazatel na instanci struktury `matrix`, nad kterou bude operace provedena.
  * \param `col` Index sloupce matice.
  * \param `*row_to_optimize` Ukazatel na size_t proměnnou, kam bude uložen index řádku pro optimalizaci.

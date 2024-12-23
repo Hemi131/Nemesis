@@ -76,6 +76,7 @@ int check_valid_chars(const char *str, char *unknown_var) {
 
     for (i = 0; str[i] != '\0'; i++) {
         if (!((str[i] >= '0' && str[i] <= '9') || str[i] == '+' || str[i] == '-' || str[i] == '*' || str[i] == '/' || str[i] == '(' || str[i] == ')' || str[i] == '{' || str[i] == '}' || str[i] == '.')) {
+            /* Byl nalezen nepovolený znak. */
             strcpy(unknown_var, str + i);
             error = 1;
             break;
@@ -83,6 +84,8 @@ int check_valid_chars(const char *str, char *unknown_var) {
     }
 
     if (error) {
+        /* Extrakce neznámého výrazu, který může být proměnná, ale nemusí.
+           Bude se později testovat. */
         for (i = 0; unknown_var[i] != '\0'; i++) {
             if ((unknown_var[i] == '+' || unknown_var[i] == '-' || unknown_var[i] == '*' || unknown_var[i] == '/' || unknown_var[i] == '(' || unknown_var[i] == ')' || unknown_var[i] == '{' || unknown_var[i] == '}' || unknown_var[i] == '.')) {
                 unknown_var[i] = '\0';
@@ -101,14 +104,11 @@ void replace_substr(char* str, const char* substr, const char* replacement) {
     size_t i, j, k, l;
  
     for (i = 0; i < strlen(str); i++) {
- 
         k = 0;
- 
-        if (str[i] == substr[k] && i + strlen(substr) <= strlen(str)) {
 
- 
+        /* První znak se shoduje. */
+        if (str[i] == substr[k] && i + strlen(substr) <= strlen(str)) {
             for (j = i; j < i + strlen(substr); j++) {
- 
                 if (str[j] != substr[k]) {
                     break;
                 }
@@ -117,18 +117,18 @@ void replace_substr(char* str, const char* substr, const char* replacement) {
                 }
             }
  
+            /* Shoduje se celý podřetězec?
+               Výměna. */
             if (j == i + strlen(substr)) {
                 for (l = 0; l < strlen(replacement); l++) {
                     ans[ans_idx++] = replacement[l];
                 }
                 i = j - 1;
             }
- 
             else {
                 ans[ans_idx++] = str[i];
             }
         }
- 
         else {
             ans[ans_idx++] = str[i];
         }
@@ -169,7 +169,11 @@ void replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
     if (!vars_sorted) {
         return;
     }
+
     memcpy(vars_sorted, vars, vars_count * sizeof(char *));
+
+    /* Musí být seřazené podle délky sestupně, aby v případě, že název jedné proměnné obsahuje název jiné proměnné,
+       nedojde k chybné výměně. */
     sort_str_by_len(vars_sorted, vars_count);
 
     for (i = 0; i < vars_count; i++) {
@@ -187,23 +191,32 @@ void replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
 }
 
 int prepare_expression(char *str, char **vars, const size_t vars_count, char* unknown_var) {
+
+    /* Kontrola uzávorkování. */
     if (!check_brackets(str)) {
         return EXIT_SYNTAX_ERROR;
     }
 
+    /* Výměna závorek. */
     change_brackets(str);
 
+    /* Výměna: název proměnné -> index proměnné ve složených závorkách */
     replace_vars_by_index(str, vars, vars_count);
 
+    /* Odstranění mezer. */
     if (!remove_substr(str, " ")) {
         return EXIT_SYNTAX_ERROR;
     }
 
+    /* Odstranění znaku nového řádku. */
     if (!remove_substr(str, "\n")) {
         return EXIT_SYNTAX_ERROR;
     }
 
+    /* Kontrola znaků. */
     if (!check_valid_chars(str, unknown_var)) {
+
+        /* Pokud může neznámý výraz být proměnnou, návratová hodnota zajistí správnou interpretaci. */
         if (can_be_var(unknown_var)) {
             return EXIT_UNKNOWN_VAR;
         }
@@ -469,13 +482,14 @@ struct queue *parse_to_rpn(const char *str) {
     if (!s) {
         return NULL;
     }
-    q = queue_alloc(strlen(str) + 1, sizeof(struct rpn_item));
+    q = queue_alloc(strlen(str) + 1, sizeof(struct rpn_item));/* +1 for possible operator on the beggining*/
 
     if (!q) {
         stack_dealloc(&s);
         return NULL;
     }
 
+    /* ošetření znaménka na začátku vstupního výrazu */
     if (strlen(str) > 1 && (str[0] == '+' || str[0] == '-')) {
         rpn_item = rpn_item_create_number(0.0);
 
@@ -579,7 +593,7 @@ struct queue *parse_to_rpn(const char *str) {
                 last_rpn_item = rpn_item;
                 i += j;
                 break;
-            default:
+            default: /* číslo */
                 for (j = 0; (str[i + j] >= '0' && str[i + j] <= '9') || str[i + j] == '.'; j++) {
                     buffer[j] = str[i + j];
                 }
@@ -608,6 +622,7 @@ struct queue *parse_to_rpn(const char *str) {
         }
     }
 
+    /* vyprázdnění zásobníku na konec fronty */
     while (stack_pop(s, &rpn_item)) {
         if (!queue_enqueue(q, &rpn_item)) {
             goto queue_failed;
@@ -706,6 +721,7 @@ end:
 
     }
 
+    /* Jestli nezbyl v zásobníku pouze výsledný výraz, RPN nebyla korektní. */
     if (!stack_pop(s, &result) || stack_item_count(s) != 0) {
         error_code = EXIT_FAILURE;
         goto rpn_evaluate_failed;
@@ -713,6 +729,7 @@ end:
 
 
     *exprResult = result;
+
 rpn_evaluate_failed:
     stack_dealloc(&s);
     queue_dealloc(&rpn);
@@ -897,6 +914,7 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
     struct queue *queue;
     struct evaluation_expression expr1, expr2, exprResult;
 
+/* ALLOC OF MEMORY */
 
     file = fopen(input_file, "r");
     if (!file) {
@@ -958,7 +976,7 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
         }
     }
 
-    /* LOADING FILE */
+/* LOADING FILE */
 
     buffer_loaded = 0;
     while (buffer_loaded || fgets(buffer, MAX_CHARS, file)) {
@@ -1040,8 +1058,9 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
             return EXIT_SYNTAX_ERROR;
         }
 
-    /* PARSING INPUT */
+/* PARSING INPUT */
 
+    /* Zjišťováni počtu proměnných. */
     strcpy(buffer, generals);
     token = strtok(buffer, " ");
     while (token != NULL) {
@@ -1049,6 +1068,7 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
         token = strtok(NULL, " ");
     }
 
+    /* Alokace struktury problem_data. */
     data = problem_data_alloc(allowed_vars_count, subjects_count, bounds_count, found_maximize ? MAXIMIZE : MINIMIZE);
     *problem_data = data;
     if (!data) {
@@ -1056,6 +1076,7 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
         goto input_parsing_fail_data_alloc;
     }
 
+    /* Parsování proměnných do struktury problem_data. */
     i = 0;
     token = strtok(generals, " ");
     while (token != NULL) {
@@ -1065,6 +1086,7 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
         token = strtok(NULL, " ");
     }
 
+    /* Parsování účelové funkce do struktury problem_data. */
     testReturn = prepare_expression(purpose, data->allowed_vars, data->allowed_vars_count, unknown_var);
     if (testReturn == EXIT_UNKNOWN_VAR) {
         error_code = EXIT_UNKNOWN_VAR;
@@ -1087,8 +1109,7 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
         goto input_parsing_fail_purpose_expr;
     }
 
-
-
+    /* Parsování operátorů Subject to do struktury problem_data. */
     for (i = 0; i < data->subjects_count; i++) {
         if (strstr(subjects[i], "<=")) {
             data->subjects_op[i] = -1;
@@ -1105,6 +1126,7 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
         }
     }
 
+    /* Parsování operátorů Bounds do struktury problem_data. */
     for (i = 0; i < data->bounds_count; i++) {
         if (strstr(bounds[i], "<=")) {
             data->bounds_op[i] = -1;
@@ -1121,10 +1143,14 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
         }
     }
 
+    /* Parsování výrazů Subject to do struktury problem_data. */
     for (i = 0; i < data->subjects_count; i++) {
+
+        /* Extrakce levé strany rovnice do bufferu. */
         token = strtok(subjects[i], "|");
         strcpy(buffer, token);
         
+        /* Příprava levé strany výrazu. */
         testReturn = prepare_expression(buffer, data->allowed_vars, data->allowed_vars_count, unknown_var);
         if (testReturn == EXIT_UNKNOWN_VAR) {
             error_code = EXIT_UNKNOWN_VAR;
@@ -1135,20 +1161,25 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
             goto input_parsing_fail_subject_expr;
         }
 
+        /* Parsování do RPN */
         queue = parse_to_rpn(buffer);
         if (!queue) {
             error_code = EXIT_SYNTAX_ERROR;
             goto input_parsing_fail_subject_expr;
         }
+
+        /* Vyhodnocení RPN */
         testReturn = rpn_evaluate(queue, data->allowed_vars_count, &expr1);
         if (testReturn == EXIT_FAILURE) {
             error_code = EXIT_SYNTAX_ERROR;
             goto input_parsing_fail_subject_expr;
         }
 
-
+        /* Extrakce pravé strany rovnice do bufferu. */
         token = strtok(NULL, "|");
         strcpy(buffer, token);
+
+        /* Příprava pravé strany výrazu. */
         testReturn = prepare_expression(buffer, data->allowed_vars, data->allowed_vars_count, unknown_var);
         if (testReturn == EXIT_UNKNOWN_VAR) {
             error_code = EXIT_UNKNOWN_VAR;
@@ -1159,22 +1190,34 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
             goto input_parsing_fail_subject_expr;
         }
 
+        /* Parsování do RPN */
         queue = parse_to_rpn(buffer);
         if (!queue) {
             error_code = EXIT_SYNTAX_ERROR;
             goto input_parsing_fail_subject_expr;
         }
-        testReturn = rpn_evaluate(queue, data->allowed_vars_count, &expr2);
 
+        /* Vyhodnocení RPN */
+        testReturn = rpn_evaluate(queue, data->allowed_vars_count, &expr2);
+        if (testReturn == EXIT_FAILURE) {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_subject_expr;
+        }
+
+        /* Odečtení pravé strany rovnice od levé, pro získání anulované rovnice, kterou lze uložit v jednom výrazu. */
         exprResult = sub_evaluation_expressions(expr1, expr2);
 
         data->subjects_expr[i] = exprResult;
     }
 
+    /* Parsování výrazů Bounds do struktury problem_data. */
     for (i = 0; i < data->bounds_count; i++) {
+
+        /* Extrakce levé strany rovnice do bufferu. */
         token = strtok(bounds[i], "|");
         strcpy(buffer, token);
         
+        /* Příprava levé strany výrazu. */
         testReturn = prepare_expression(buffer, data->allowed_vars, data->allowed_vars_count, unknown_var);
         if (testReturn == EXIT_UNKNOWN_VAR) {
             error_code = EXIT_UNKNOWN_VAR;
@@ -1185,20 +1228,25 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
             goto input_parsing_fail_bound_expr;
         }
 
+        /* Parsování do RPN */
         queue = parse_to_rpn(buffer);
         if (!queue) {
             error_code = EXIT_SYNTAX_ERROR;
             goto input_parsing_fail_bound_expr;
         }
+
+        /* Vyhodnocení RPN */
         testReturn = rpn_evaluate(queue, data->allowed_vars_count, &expr1);
         if (testReturn == EXIT_FAILURE) {
             error_code = EXIT_SYNTAX_ERROR;
             goto input_parsing_fail_bound_expr;
         }
 
-
+        /* Extrakce pravé strany rovnice do bufferu. */
         token = strtok(NULL, "|");
         strcpy(buffer, token);
+
+        /* Příprava pravé strany výrazu. */
         testReturn = prepare_expression(buffer, data->allowed_vars, data->allowed_vars_count, unknown_var);
         if (testReturn == EXIT_UNKNOWN_VAR) {
             error_code = EXIT_UNKNOWN_VAR;
@@ -1209,13 +1257,21 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
             goto input_parsing_fail_bound_expr;
         }
 
+        /* Parsování do RPN */
         queue = parse_to_rpn(buffer);
         if (!queue) {
             error_code = EXIT_SYNTAX_ERROR;
             goto input_parsing_fail_bound_expr;
         }
-        testReturn = rpn_evaluate(queue, data->allowed_vars_count, &expr2);
 
+        /* Vyhodnocení RPN */
+        testReturn = rpn_evaluate(queue, data->allowed_vars_count, &expr2);
+        if (testReturn == EXIT_FAILURE) {
+            error_code = EXIT_SYNTAX_ERROR;
+            goto input_parsing_fail_bound_expr;
+        }
+
+        /* Odečtení pravé strany rovnice od levé, pro získání anulované rovnice, kterou lze uložit v jednom výrazu. */
         exprResult = sub_evaluation_expressions(expr1, expr2);
 
         data->bounds_expr[i] = exprResult;

@@ -65,6 +65,7 @@ int check_valid_chars(const char *str, char *unknown_var);
 /**
  * \brief Funkce nahradí všechny výskyty podřetězce za jiný podřetězec.
  * Původní řetězec je změněn, proto musí být alokován dostatečný prostor !!!
+ * Inspirováno: https://www.geeksforgeeks.org/find-and-replace-all-occurrence-of-a-substring-in-the-given-string/
  * \param `*str` Řetězec.
  * \param `*substr` Podřetězec.
  * \param `*replacement` Nahrazující podřetězec.
@@ -239,7 +240,7 @@ struct queue *parse_to_rpn(const char *str);
 
 /**
  * \brief Funkce provede vyhodnocení RPN výrazu.
- * \param `*rpn` Ukazatel na frontu s RPN výrazem.
+ * \param `*rpn` Ukazatel na frontu s RPN výrazem. Tato fronta bude po použití uvolněna
  * \param `var_count` Počet proměnných.
  * \param `*exprResult` Ukazatel na již alokovanou strukturu, kam bude výsledek uložen.
  * \return EXIT_SUCCESS, pokud proběhlo v pořádku, jinak EXIT_FAILURE.

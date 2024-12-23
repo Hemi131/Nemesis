@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
 
     size_t i;
 
-/* ARGS PARSING */
+/* Parsování argumentů. */
 
     error_code = args_parser(argc, argv, &input_file, &output_file);
 
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
         goto main_free;
     }
 
-/* INPUT PARSING */
+/* Parsování vstupu. */
 
     error_code = input_parser(input_file, &data, unknown_var);
 
@@ -93,10 +93,11 @@ int main(int argc, char *argv[]) {
         goto main_free;
     }
 
-/* USE OF SIMPLEX */
+/* Použití simplexového algoritmu. */
 
     error_code = simplex(data);
 
+    /* Vypsání případných nepožitých proměnných. */
     for (i = 0; i < data->allowed_vars_count; ++i) {
         if (data->unused_vars[i] == UNUSED_VAR) {
             printf("Warning: unused variable '%s'!\n", data->allowed_vars[i]);
@@ -109,6 +110,9 @@ int main(int argc, char *argv[]) {
     else if (error_code == EXIT_OBJECTIVE_INFEASIBLE) {
         printf("No feasible solution exists.\n");
     }
+    else if (error_code == EXIT_MALLOC_ERROR) {
+        printf("Memory allocation error!\n");
+    }
     else if (error_code == EXIT_SUCCESS) {
         error_code = printResults(output_file, data);
         if (error_code == EXIT_INVALID_OUTPUT_FILE) {
@@ -116,7 +120,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-/* FREE */
+/* Uvolnění alokovaných prostředků. */
 
 main_free:
     problem_data_dealloc(data);

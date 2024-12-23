@@ -144,15 +144,17 @@ int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object
     size_t smallest_quotient_row, smallest_quotient_col, row_index, i, iterations_count;
     
     if (!mat || !mat->items || !base_vars || !object_to) {
-        return -2;
+        return EXIT_MALLOC_ERROR;
     }
 
     iterations_count = 0;
 
-   while ((!optimal_max_test(mat, base_vars, object_to, &smallest_quotient_col) || !simplex_valid_base(mat, base_vars, not_valid_basis_count, not_valid_basis)) && iterations_count++ < MAX_ITERATIONS_COUNT) {
+    while ((!optimal_max_test(mat, base_vars, object_to, &smallest_quotient_col) || !simplex_valid_base(mat, base_vars, not_valid_basis_count, not_valid_basis)) && iterations_count++ < MAX_ITERATIONS_COUNT) {
         if (!_smallest_quotient_row_index(mat, smallest_quotient_col, &smallest_quotient_row)) {
             return EXIT_OBJECTIVE_UNBOUNDED;
         }
+
+        /* Změna báze řádku simplexové tabulky. */
         base_vars[smallest_quotient_row] = smallest_quotient_col;
 
         #ifdef SIMPLEX_DEBUG
@@ -164,11 +166,14 @@ int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object
             return EXIT_OBJECTIVE_INFEASIBLE;
         }
 
+        /* Vynulování výsledků. */
         for (i = 0; i < real_vars_count; i++) {
             result[i] = 0.0;
         }
 
+        /* Výpočet výsledků. */
         for (row_index = 0; row_index < mat->rows; row_index++) {
+            /* Pokud není proměnná z původního problému, tak nepočitej její aktuální hodnotu */
             if (base_vars[row_index] >= real_vars_count) {
                 continue;
             }
@@ -184,6 +189,7 @@ int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object
     matrix_print(mat);
     #endif
 
+    /* Pokud zůstala v bázi nevalidní proměnná, řešení není korektní. */
     if (!simplex_valid_base(mat, base_vars, not_valid_basis_count, not_valid_basis)) {
         return EXIT_OBJECTIVE_INFEASIBLE;
     }
@@ -200,7 +206,10 @@ int simplex(struct problem_data *data) {
     mat_num_type *object_to;
     size_t *base_vars, base_vars_index, *not_valid_basis, not_valid_basis_count;
 
+    /* Knotrola hodnot pravých stran Subject to. */
     for (i = 0; i < data->subjects_count; i++) {
+
+        /* Pokud je pravá strana rovnice negativní, vynásobení rovnice -1 a otočení znaménka. */
         if ((data->subjects_expr[i]).constant > 0.0) {
             for (j = 0; j < data->allowed_vars_count; j++) {
                 (data->subjects_expr[i]).var_koeficients[j]   *= -1.0;
@@ -209,6 +218,7 @@ int simplex(struct problem_data *data) {
 
             data->subjects_op[i] *= -1;
         }
+        /* Pokud je pravá strana rovnice rovna 0 a operátor rovnice je >=, vynásobení rovnice -1 a otočení znaménka. */
         else if ((data->subjects_expr[i]).constant == 0.0 && data->subjects_op[i] == 1) {
             for (j = 0; j < data->allowed_vars_count; j++) {
                 (data->subjects_expr[i]).var_koeficients[j]   *= -1.0;
@@ -219,7 +229,10 @@ int simplex(struct problem_data *data) {
         }
     }
 
+    /* Knotrola hodnot pravých stran Bounds. */
     for (i = 0; i < data->bounds_count; i++) {
+
+        /* Pokud je pravá strana rovnice negativní, vynásobení rovnice -1 a otočení znaménka. */
         if ((data->bounds_expr[i]).constant > 0.0) {
             for (j = 0; j < data->allowed_vars_count; j++) {
                 (data->bounds_expr[i]).var_koeficients[j]   *= -1.0;
@@ -228,6 +241,7 @@ int simplex(struct problem_data *data) {
 
             data->bounds_op[i] *= -1;
         }
+        /* Pokud je pravá strana rovnice rovna 0 a operátor rovnice je >=, vynásobení rovnice -1 a otočení znaménka. */
         else if ((data->bounds_expr[i]).constant == 0.0 && data->bounds_op[i] == 1) {
             for (j = 0; j < data->allowed_vars_count; j++) {
                 (data->bounds_expr[i]).var_koeficients[j]   *= -1.0;
@@ -238,7 +252,8 @@ int simplex(struct problem_data *data) {
         }
     }
 
-    cols_count = data->allowed_vars_count + 1; /* +1 for constant */
+    /* Výpočet celkového počtu sloupců simplexové tabulky. */
+    cols_count = data->allowed_vars_count + 1; /* +1 pro konstanty pravých stran */
     for (i = 0; i < data->subjects_count; i++) {
         if (data->subjects_op[i] == 1) {
             cols_count += 2;
@@ -256,30 +271,35 @@ int simplex(struct problem_data *data) {
         }
     }
 
+    /* Alokace simplexové tabulky. */
     mat = matrix_allocate(data->subjects_count + data->bounds_count, cols_count, 0.0);
     if (!mat) {
         error_code = EXIT_MALLOC_ERROR;
         goto simplex_matrix_malloc_fail;
     }
 
+    /* Alokace pole koeficientů proměnných účelové funkce.  */
     object_to = malloc(cols_count * sizeof(mat_num_type));
     if (!object_to) {
         error_code = EXIT_MALLOC_ERROR;
         goto simplex_object_to_malloc_fail;
     }
 
+    /* Alokace pole indexů bázových proměnných. */
     base_vars = malloc((data->subjects_count + data->bounds_count) * sizeof(size_t));
     if (!base_vars) {
         error_code = EXIT_MALLOC_ERROR;
         goto simplex_base_vars_malloc_fail;
     }
 
+    /* Alokace pole indexů nevalidních bázových proměnných. */
     not_valid_basis = malloc(cols_count * sizeof(size_t));
     if (!not_valid_basis) {
         error_code = EXIT_MALLOC_ERROR;
         goto simplex_not_valid_basis_malloc_fail;
     }
 
+    /* Naplnění simplexové tabulky daty Subject to. */
     for (i = 0; i < data->subjects_count; i++) {
         for (j = 0; j < data->allowed_vars_count; j++) {
             matrix_set(mat, i, j, data->subjects_expr[i].var_koeficients[j]);
@@ -287,6 +307,7 @@ int simplex(struct problem_data *data) {
         matrix_set(mat, i, cols_count - 1, -1.0 * data->subjects_expr[i].constant); /* kvůli přehození na druhou stranu */
     }
 
+    /* Naplnění simplexové tabulky daty Bounds. */
     for (i = 0; i < data->bounds_count; i++) {
         for (j = 0; j < data->allowed_vars_count; j++) {
             matrix_set(mat, i + data->subjects_count, j, data->bounds_expr[i].var_koeficients[j]);
@@ -294,15 +315,18 @@ int simplex(struct problem_data *data) {
         matrix_set(mat, i + data->subjects_count, cols_count - 1, -1.0 * data->bounds_expr[i].constant);  /* kvůli přehození na druhou stranu  */
     }
 
+    /* Identifikace typu problému. */
     if (data->problem_type == MINIMIZE) {
         problem_type_coeficient = -1.0;
     }
 
+    /* Naplnění pole koeficientů původních proměnných účelové funkce. 
+       Při minimalizaci jsou obráceny koeficienty původních proměnných účelové funkce. */
     for (i = 0; i < data->purpose_expr.var_count; i++) {
         object_to[i] = problem_type_coeficient * data->purpose_expr.var_koeficients[i];
     }
 
-
+    /* Naplnění pole koeficientů pomocných proměnných účelové funkce a simplexové tabulky. */
     base_vars_index = 0;
     not_valid_basis_count = 0;
     j = data->allowed_vars_count;
@@ -332,6 +356,7 @@ int simplex(struct problem_data *data) {
         }
     }
 
+    /* Naplnění pole koeficientů pomocných proměnných účelové funkce a simplexové tabulky. */
     for (i = 0; i < data->bounds_count; i++) {
         if (data->bounds_op[i] == 1) {
             matrix_set(mat, i + data->subjects_count, j, -1.0);
@@ -359,14 +384,18 @@ int simplex(struct problem_data *data) {
         }
     }
 
+    /* Detekce nepoužitých proměnných. */
     for (i = 0; i < data->allowed_vars_count; i++) {
         if (is_column_zero(mat, i)) {
             data->unused_vars[i] = UNUSED_VAR;
         }
     }
 
+    /* Spuštění simplexové metody. */
     error_code = simplex_maximize(mat, base_vars, object_to, data->result, data->allowed_vars_count, not_valid_basis, not_valid_basis_count);
     
+/* Uvolnění alokovaných prostředků. */
+
     free(not_valid_basis);
 simplex_not_valid_basis_malloc_fail:
     free(base_vars);
