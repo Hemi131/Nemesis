@@ -95,16 +95,18 @@ int check_valid_chars(const char *str, char *unknown_var) {
     return 1;
 }
 
-int replace_substr(char *str, const char *substr, const char *replacement) {
+int replace_substr1(char *str, const char *substr, const char *replacement) {
     char *pos, *temp;
     size_t len = strlen(substr);
+    size_t count = 0;
 
     temp = malloc(MAX_CHARS);
     if (!temp) {
         return EXIT_FAILURE;
     }
 
-    while ((pos = strstr(str, substr)) != NULL) {
+    pos = strstr(str, substr);
+    while (pos != NULL && (count++ < 100)) {
         strncpy(temp, str, pos - str);
         temp[pos - str] = '\0';
 
@@ -112,9 +114,59 @@ int replace_substr(char *str, const char *substr, const char *replacement) {
         strcat(temp, pos + len);
 
         strcpy(str, temp);
+
+        pos = strstr(str, substr);
+    }
+
+    if (count >= 100) {
+        free(temp);
+        return EXIT_FAILURE;
     }
 
     free(temp);
+    return EXIT_SUCCESS;
+}
+
+int replace_substr(char* str, const char* substr, const char* replacement) {
+    char ans[MAX_CHARS] = { 0 };
+    int ans_idx = 0;
+    size_t i, j, k, l;
+ 
+    for (i = 0; i < strlen(str); i++) {
+ 
+        k = 0;
+ 
+        if (str[i] == substr[k] && i + strlen(substr) <= strlen(str)) {
+
+ 
+            for (j = i; j < i + strlen(substr); j++) {
+ 
+                if (str[j] != substr[k]) {
+                    break;
+                }
+                else {
+                    k = k + 1;
+                }
+            }
+ 
+            if (j == i + strlen(substr)) {
+                for (l = 0; l < strlen(replacement); l++) {
+                    ans[ans_idx++] = replacement[l];
+                }
+                i = j - 1;
+            }
+ 
+            else {
+                ans[ans_idx++] = str[i];
+            }
+        }
+ 
+        else {
+            ans[ans_idx++] = str[i];
+        }
+    }
+
+    strcpy(str, ans);
     return EXIT_SUCCESS;
 }
 
@@ -143,14 +195,14 @@ void sort_str_by_len(char *arr[], size_t n) {
     }
 }
 
-void replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
+int replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
     size_t i, j;
     char buffer[MAX_CHARS];
     char **vars_sorted;
 
     vars_sorted = malloc(vars_count * sizeof(char *));
     if (!vars_sorted) {
-        return;
+        return EXIT_MALLOC_ERROR;
     }
     memcpy(vars_sorted, vars, vars_count * sizeof(char *));
     sort_str_by_len(vars_sorted, vars_count);
@@ -163,10 +215,15 @@ void replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
         }
 
         sprintf(buffer, "{%lu}", j);
-        replace_substr(str, vars_sorted[i], buffer);
+        if (replace_substr(str, vars_sorted[i], buffer)) {
+            free(vars_sorted);
+            return 0;
+        }
     }
 
     free(vars_sorted);
+
+    return 1;
 }
 
 int prepare_expression(char *str, char **vars, const size_t vars_count, char* unknown_var) {
@@ -176,7 +233,9 @@ int prepare_expression(char *str, char **vars, const size_t vars_count, char* un
 
     change_brackets(str);
 
-    replace_vars_by_index(str, vars, vars_count);
+    if (!replace_vars_by_index(str, vars, vars_count)) {
+        return EXIT_SYNTAX_ERROR;
+    }
 
     if (!remove_substr(str, " ")) {
         return EXIT_SYNTAX_ERROR;
@@ -878,7 +937,7 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
     int found_maximize = 0;
     int found_minimize = 0;
 
-    size_t i;
+    size_t i, j;
     char *token;
     struct queue *queue;
     struct evaluation_expression expr1, expr2, exprResult;
@@ -1159,6 +1218,17 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
         exprResult = sub_evaluation_expressions(expr1, expr2);
 
         data->subjects_expr[i] = exprResult;
+    }
+
+    for (i = 0; i < data->subjects_count; i++) {
+        if ((data->subjects_expr[i]).constant > 0.0) {
+            for (j = 0; j < data->allowed_vars_count; j++) {
+                (data->subjects_expr[i]).var_koeficients[j]   *= -1.0;
+            }
+            (data->subjects_expr[i]).constant *= -1.0;
+
+            data->subjects_op[i] *= -1;
+        }
     }
 
     for (i = 0; i < data->bounds_count; i++) {

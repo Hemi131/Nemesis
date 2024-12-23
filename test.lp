@@ -1,13 +1,12 @@
-\ uloha z uvodu zadani
-
-Subject To \ poradi neni fixni
-vyroba: x_1 + 2x_2 <= 8
-baleni: 2 *x_1 + 1 * x_2 <= 6
+\ uloha z http://najada.fav.zcu.cz/~ryjacek/students/ps/TGD2.pdf
+Subject To
+ca: (-2var_x + 1 * var_y) >= 2
+cb: var_x - [2var_y] >= 2
+Minimize
+var_x - var_y
 Generals
-x_2 x_1 x_3
+var_x var_y
 Bounds
-0 <= x_1
-0 <= x_2
-Maximize
-3x_1+ 2 * x_2 \ ucelova funkce
+var_x >= 0
+var_y >= 0
 End

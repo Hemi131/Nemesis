@@ -94,14 +94,20 @@ int optimal_max_test(struct matrix *mat, size_t *base_vars, mat_num_type *object
         return -1;
     }
 
-    max_value = 0.;
+    max_value = -THE_BIG_M * THE_BIG_M;
     for (col_index = 0; col_index < mat->cols - 1; ++col_index) {
         test_value = object_to[col_index];
+
         for (row_index = 0; row_index < mat->rows; ++row_index) {
             test_value -= matrix_get(mat, row_index, col_index) * object_to[base_vars[row_index]];
         }
 
         /* printf("Test value: %f\n", test_value); */
+
+        if (test_value == 0.0) {
+            continue;
+        }
+
         if (test_value > max_value) {
             max_value = test_value;
             *col_to_optimize = col_index;
@@ -116,14 +122,28 @@ int optimal_max_test(struct matrix *mat, size_t *base_vars, mat_num_type *object
     }
 }
 
+int simplex_valid_base(struct matrix *mat, size_t *base_vars, size_t not_valid_basis_count, size_t *not_valid_basis) {
+    size_t i, j;
+
+    for (i = 0; i < mat->rows; ++i) {
+        for (j = 0; j < not_valid_basis_count; ++j) {
+            if (base_vars[i] == not_valid_basis[j]) {
+                return 0;
+            }
+        }
+    }
+
+    return 1;
+}
+
 int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object_to, mat_num_type *result, size_t real_vars_count, size_t *not_valid_basis, size_t not_valid_basis_count) {
-    size_t smallest_quotient_row, smallest_quotient_col, row_index, i, j;
+    size_t smallest_quotient_row, smallest_quotient_col, row_index, i;
     
     if (!mat || !mat->items || !base_vars || !object_to) {
         return -2;
     }
 
-   while (!optimal_max_test(mat, base_vars, object_to, &smallest_quotient_col)) {
+   while ((!optimal_max_test(mat, base_vars, object_to, &smallest_quotient_col)) || !simplex_valid_base(mat, base_vars, not_valid_basis_count, not_valid_basis)) {
         if (!_smallest_quotient_row_index(mat, smallest_quotient_col, &smallest_quotient_row)) {
             return EXIT_OBJECTIVE_UNBOUNDED;
         }
@@ -136,24 +156,20 @@ int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object
             return EXIT_OBJECTIVE_INFEASIBLE;
         }
 
+        for (i = 0; i < real_vars_count; i++) {
+            result[i] = 0.0;
+        }
+
         for (row_index = 0; row_index < mat->rows; ++row_index) {
             if (base_vars[row_index] >= real_vars_count) {
                 continue;
             }
             result[base_vars[row_index]] = matrix_get(mat, row_index, mat->cols - 1);
-            /* printf("result[%lu] = %f\n", base_vars[row_index], result[base_vars[row_index]]); */
+/*             printf("result[%lu] = %f\n", base_vars[row_index], result[base_vars[row_index]]); */
         }
     }
 
     /* matrix_print(mat); */
-
-    for (i = 0; i < mat->rows; ++i) {
-        for (j = 0; j < not_valid_basis_count; ++j) {
-            if (base_vars[i] == not_valid_basis[j]) {
-                return EXIT_OBJECTIVE_INFEASIBLE;
-            }
-        }
-    }
 
     return 0;
 }
@@ -239,7 +255,7 @@ int simplex(struct problem_data *data) {
         if (data->subjects_op[i] == 1) {
             matrix_set(mat, i, j, -1.0);
             object_to[j] = 0.0;
-            not_valid_basis[not_valid_basis_count++] = j;
+            /* not_valid_basis[not_valid_basis_count++] = j; */
             j++;
             matrix_set(mat, i, j, 1.0);
             object_to[j] = -M;
