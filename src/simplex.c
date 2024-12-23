@@ -101,6 +101,7 @@ int optimal_max_test(struct matrix *mat, size_t *base_vars, mat_num_type *object
             test_value -= matrix_get(mat, row_index, col_index) * object_to[base_vars[row_index]];
         }
 
+        /* printf("Test value: %f\n", test_value); */
         if (test_value > max_value) {
             max_value = test_value;
             *col_to_optimize = col_index;
@@ -140,8 +141,11 @@ int simplex_maximize(struct matrix *mat, size_t *base_vars, mat_num_type *object
                 continue;
             }
             result[base_vars[row_index]] = matrix_get(mat, row_index, mat->cols - 1);
+            /* printf("result[%lu] = %f\n", base_vars[row_index], result[base_vars[row_index]]); */
         }
     }
+
+    /* matrix_print(mat); */
 
     for (i = 0; i < mat->rows; ++i) {
         for (j = 0; j < not_valid_basis_count; ++j) {
@@ -160,8 +164,8 @@ int simplex(struct problem_data *data) {
     size_t i, j, cols_count;
     struct matrix *mat;
     mat_num_type problem_type_coeficient = 1.0;
-    mat_num_type *object_to, *not_valid_basis;
-    size_t *base_vars, base_vars_index, not_valid_basis_count;
+    mat_num_type *object_to;
+    size_t *base_vars, base_vars_index, *not_valid_basis, not_valid_basis_count;
 
     cols_count = data->allowed_vars_count + 1; /* +1 for constant */
     for (i = 0; i < data->subjects_count; i++) {
@@ -172,16 +176,16 @@ int simplex(struct problem_data *data) {
             cols_count += 1;
         }
     }
-    for (i = 0; i < data->bounds_count; i++) {
+    /* for (i = 0; i < data->bounds_count; i++) {
         if (data->bounds_op[i] == 1) {
             cols_count += 2;
         }
         else {
             cols_count += 1;
         }
-    }
+    } */
 
-    mat = matrix_allocate(data->subjects_count + data->bounds_count, cols_count, 0.0);
+    mat = matrix_allocate(data->subjects_count /* + data->bounds_count */, cols_count, 0.0);
     if (!mat) {
         error_code = EXIT_MALLOC_ERROR;
         goto simplex_matrix_malloc_fail;
@@ -193,7 +197,7 @@ int simplex(struct problem_data *data) {
         goto simplex_object_to_malloc_fail;
     }
 
-    base_vars = malloc((data->subjects_count + data->bounds_count) * sizeof(size_t));
+    base_vars = malloc((data->subjects_count /* + data->bounds_count */) * sizeof(size_t));
     if (!base_vars) {
         error_code = EXIT_MALLOC_ERROR;
         goto simplex_base_vars_malloc_fail;
@@ -212,12 +216,12 @@ int simplex(struct problem_data *data) {
         matrix_set(mat, i, cols_count - 1, -1.0 * data->subjects_expr[i].constant); /* kvůli přehození na druhou stranu */
     }
 
-    for (i = 0; i < data->bounds_count; ++i) {
+    /* for (i = 0; i < data->bounds_count; ++i) {
         for (j = 0; j < data->allowed_vars_count; ++j) {
             matrix_set(mat, i + data->subjects_count, j, data->bounds_expr[i].var_koeficients[j]);
         }
-        matrix_set(mat, i + data->subjects_count, cols_count - 1, -1.0 * data->bounds_expr[i].constant); /* kvůli přehození na druhou stranu */
-    }
+        matrix_set(mat, i + data->subjects_count, cols_count - 1, -1.0 * data->bounds_expr[i].constant);  kvůli přehození na druhou stranu 
+    } */
 
     if (data->problem_type == MINIMIZE) {
         problem_type_coeficient = -1.0;
@@ -258,7 +262,7 @@ int simplex(struct problem_data *data) {
         }
     }
 
-    for (i = 0; i < data->bounds_count; ++i) {
+    /* for (i = 0; i < data->bounds_count; ++i) {
         if (data->bounds_op[i] == 1) {
             matrix_set(mat, i + data->subjects_count, j, -1.0);
             object_to[j] = 0.0;
@@ -283,11 +287,11 @@ int simplex(struct problem_data *data) {
             not_valid_basis[not_valid_basis_count++] = j;
             j++;
         }
-    }
+    } */
 
     for (i = 0; i < data->allowed_vars_count; i++) {
         if (is_column_zero(mat, i)) {
-            printf("Warning: unused variable ’%s’!\n", data->allowed_vars[i]);
+            data->unused_vars[i] = UNUSED_VAR;
         }
     }
 

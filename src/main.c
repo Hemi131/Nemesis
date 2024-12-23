@@ -35,6 +35,26 @@ void print_array_lu(size_t arr[], size_t n) {
     }
 }
 
+int printResultsToFile(char *output_file, struct problem_data *data) {
+    FILE *file = fopen(output_file, "w");
+    size_t i;
+
+    if (!file) {
+        return EXIT_INVALID_OUTPUT_FILE;
+    }
+
+    if (data->result) {
+        for (i = 0; i < data->allowed_vars_count; ++i) {
+            if (data->unused_vars[i] != UNUSED_VAR) {
+                fprintf(file, "%s = %f\n", data->allowed_vars[i], data->result[i]);
+            }
+        }
+    }
+
+    fclose(file);
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, char *argv[]) {
     int error_code = 0;
     char *input_file;
@@ -72,15 +92,40 @@ int main(int argc, char *argv[]) {
         goto fail_args;
     }
     else if (error_code == EXIT_UNKNOWN_VAR) {
-        printf("Unknown variable ’%s’!\n", unknown_var);
+        printf("Unknown variable '%s'!\n", unknown_var);
         goto fail_args;
     }
 
     error_code = simplex(data);
-    /* TODO: error code kontrola, tohle bude pridany do kontroly*/
-        for (i = 0; i < data->allowed_vars_count; ++i) {
-            printf("%s = %f\n", data->allowed_vars[i], data->result[i]);
+
+    for (i = 0; i < data->allowed_vars_count; ++i) {
+        if (data->unused_vars[i] == UNUSED_VAR) {
+            printf("Warning: unused variable '%s'!\n", data->allowed_vars[i]);
         }
+    }
+
+    if (error_code == EXIT_OBJECTIVE_UNBOUNDED) {
+        printf("Objective function is unbounded.\n");
+    }
+    else if (error_code == EXIT_OBJECTIVE_INFEASIBLE) {
+        printf("No feasible solution exists.\n");
+    }
+    else if (error_code == EXIT_SUCCESS) {
+        if (output_file) {
+            error_code = printResultsToFile(output_file, data);
+            if (error_code == EXIT_INVALID_OUTPUT_FILE) {
+                printf("Invalid output destination!\n");
+                goto fail_args;
+            }
+        }
+        else {
+            for (i = 0; i < data->allowed_vars_count; ++i) {
+                if (data->unused_vars[i] != UNUSED_VAR) {
+                    printf("%s = %f\n", data->allowed_vars[i], data->result[i]);
+                }
+            }
+        }
+    }
 
 fail_args:
     problem_data_dealloc(data);

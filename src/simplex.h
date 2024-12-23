@@ -4,6 +4,8 @@
 #define EXIT_OBJECTIVE_UNBOUNDED 20
 #define EXIT_OBJECTIVE_INFEASIBLE 21
 
+#define UNUSED_VAR 1
+
 #define THE_BIG_M 1000.0
 
 /**

@@ -1,0 +1,30 @@
+CC = gcc
+CFLAGS = -Wall -Wextra -g
+BUILD_DIR = build
+BIN = lp.exe
+
+$(BUILD_DIR)/stack.o: src/stack.c
+    $(CC) -c $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/parser.o: src/parser.c
+    $(CC) -c $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/simplex.o: src/simplex.c
+    $(CC) -c $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/queue.o: src/queue.c
+    $(CC) -c $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/main.o: src/main.c
+    $(CC) -c $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR):
+    if not exist $(BUILD_DIR) mkdir $(BUILD_DIR)
+
+clean:
+    if exist $(BUILD_DIR) rmdir /S /Q $(BUILD_DIR)
+    del /F /Q $(BIN)
+
+# Podle zadání semestrální práce (cíl je možné přidat jako závislost cíle `all`).
+install: $(BUILD_DIR)/$(BIN)
+    copy $(BUILD_DIR)\$(BIN) .\$(BIN)

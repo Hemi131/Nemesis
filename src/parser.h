@@ -10,8 +10,7 @@
 #include <stddef.h>
 
 #define EXIT_INVALID_INPUT_FILE 1
-#define EXIT_INVALID_OUTPUT_FILE 2
-#define UNUSED_VAR 9
+#define EXIT_INVALID_OUTPUT_FILE 2 
 #define EXIT_UNKNOWN_VAR 10
 #define EXIT_SYNTAX_ERROR 11
 #define EXIT_MALLOC_ERROR 1001
@@ -41,6 +40,8 @@ int args_parser(int argc, char *argv[], char **input_file, char **output_file);
  * \return int 1, pokud proběhla v pořádku, jinak 0.
  */
 int remove_substr(char *str, const char *substr);
+
+int can_be_var(const char *str);
 
 /**
  * \brief Funkce zkontroluje validitu znaků v řetězci.
@@ -230,7 +231,7 @@ struct problem_data {
     size_t subjects_count, bounds_count, allowed_vars_count;
     struct evaluation_expression purpose_expr, *subjects_expr, *bounds_expr;
     char **allowed_vars;
-    int *subjects_op, *bounds_op;
+    int *subjects_op, *bounds_op, *unused_vars;
     mat_num_type *result;
 };
 

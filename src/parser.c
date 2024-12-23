@@ -58,6 +58,18 @@ int remove_substr(char *str, const char *substr) {
     return 1;
 }
 
+int can_be_var(const char *str) {
+    size_t i;
+
+    for (i = 0; str[i] != '\0'; ++i) {
+        if ((str[i] == '+' || str[i] == '-' || str[i] == '*' || str[i] == '/' || str[i] == '(' || str[i] == ')' || str[i] == '{' || str[i] == '}' || str[i] == '.' || str[i] == ':' || str[i] == '<' || str[i] == '>' || str[i] == '=')) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 int check_valid_chars(const char *str, char *unknown_var) {
     size_t i;
     int error = 0;
@@ -87,7 +99,7 @@ int replace_substr(char *str, const char *substr, const char *replacement) {
     char *pos, *temp;
     size_t len = strlen(substr);
 
-    temp = malloc(strlen(str) + 1);
+    temp = malloc(MAX_CHARS);
     if (!temp) {
         return EXIT_FAILURE;
     }
@@ -175,7 +187,10 @@ int prepare_expression(char *str, char **vars, const size_t vars_count, char* un
     }
 
     if (!check_valid_chars(str, unknown_var)) {
-        return EXIT_UNKNOWN_VAR;
+        if (can_be_var(unknown_var)) {
+            return EXIT_UNKNOWN_VAR;
+        }
+        return EXIT_SYNTAX_ERROR;
     }
 
     return 1;
@@ -487,6 +502,14 @@ struct queue *parse_to_rpn(const char *str) {
                 break;
             case '+':
             case '-':
+                if (last_rpn_item.type == 'b' && last_rpn_item.data.bracket == '(') {
+                    rpn_item = rpn_item_create_number(0.0);
+
+                    if (!queue_enqueue(q, &rpn_item)) {
+                        goto queue_failed;
+                    }
+                }
+
                 while (stack_head(s, &rpn_item) && rpn_item.type == '2') {
                     if (!stack_pop(s, &rpn_item)) {
                         goto stack_failed;
@@ -723,6 +746,7 @@ int problem_data_init(struct problem_data *data, const size_t var_count, const s
     data->bounds_op = malloc(data->bounds_count * sizeof(int));
     data->subjects_op = malloc(data->subjects_count * sizeof(int));
     data->result = malloc(data->allowed_vars_count * sizeof(mat_num_type));
+    data->unused_vars = malloc(data->allowed_vars_count * sizeof(int));
 
     if (data->allowed_vars) {
         for (i = 0; i < data->allowed_vars_count; i++) {
@@ -744,7 +768,7 @@ int problem_data_init(struct problem_data *data, const size_t var_count, const s
         }
     }
     
-    if (!data->subjects_expr || !data->bounds_expr || !data->allowed_vars || !data->bounds_op || !data->subjects_op || !data->result) {
+    if (!data->subjects_expr || !data->bounds_expr || !data->allowed_vars || !data->bounds_op || !data->subjects_op || !data->result || !data->unused_vars) {
         if (data->subjects_expr) {
             free(data->subjects_expr);
         }
@@ -769,11 +793,16 @@ int problem_data_init(struct problem_data *data, const size_t var_count, const s
             free(data->result);
         }
 
+        if (data->unused_vars) {
+            free(data->unused_vars);
+        }
+
         return 0;
     }
 
     for (i = 0; i < data->allowed_vars_count; i++) {
         data->result[i] = 0.0;
+        data->unused_vars[i] = 0;
     }
 
     return 1;
@@ -815,6 +844,10 @@ void problem_data_deinit(struct problem_data *data) {
     if (data->result) {
         free(data->result);
     }
+
+    if (data->unused_vars) {
+        free(data->unused_vars);
+    }
 }
 
 void problem_data_dealloc(struct problem_data *data) {
@@ -829,6 +862,7 @@ void problem_data_dealloc(struct problem_data *data) {
 int input_parser(char *input_file, struct problem_data **problem_data, char *unknown_var) {
     int error_code = 0;
     int testReturn;
+    int buffer_loaded;
     FILE *file;
     struct problem_data *data;
 
@@ -912,11 +946,13 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
 
     /* LOADING FILE */
 
-    while (fgets(buffer, MAX_CHARS, file)) {
+    buffer_loaded = 0;
+    while (buffer_loaded || fgets(buffer, MAX_CHARS, file)) {
+        buffer_loaded = 0;
         if (buffer[0] == '\\' || buffer[0] == '\n') {
             continue;
         }
-    input_parsing_start:
+
         if (strstr(buffer, "End")) {
             break;
         }
@@ -928,29 +964,42 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
                 }
 
                 replace_substr_with_end(buffer, "\\");
-                strtok(buffer, ":");
-                strcpy(subjects[subjects_count++], strtok(NULL, ":"));
+                token = strchr(buffer, ':');
+                if (!token) {
+                    error_code = EXIT_SYNTAX_ERROR;
+                    goto input_parsing_fail_unknown_line;
+                }
+                token++;
+                strcpy(subjects[subjects_count++], token);
             }
-            goto input_parsing_start;
-
+            buffer_loaded = 1;
         }
 
         else if (strstr(buffer, "Maximize")) {
             found_maximize = 1;
-            fgets(buffer, MAX_CHARS, file);
+            if (!fgets(buffer, MAX_CHARS, file)) {
+                error_code = EXIT_SYNTAX_ERROR;
+                goto input_parsing_fail_unknown_line;
+            }
             replace_substr_with_end(buffer, "\\");
             strcpy(purpose, buffer);
         }
 
         else if (strstr(buffer, "Minimize")) {
             found_minimize = 1;
-            fgets(buffer, MAX_CHARS, file);
+            if (!fgets(buffer, MAX_CHARS, file)) {
+                error_code = EXIT_SYNTAX_ERROR;
+                goto input_parsing_fail_unknown_line;
+            }
             replace_substr_with_end(buffer, "\\");
             strcpy(purpose, buffer);
         }
 
         else if (strstr(buffer, "Generals")) {
-            fgets(buffer, MAX_CHARS, file);
+            if (!fgets(buffer, MAX_CHARS, file)) {
+                error_code = EXIT_SYNTAX_ERROR;
+                goto input_parsing_fail_unknown_line;
+            }
             replace_substr_with_end(buffer, "\\");
             strcpy(generals, buffer);
         }
@@ -963,7 +1012,7 @@ int input_parser(char *input_file, struct problem_data **problem_data, char *unk
                 replace_substr_with_end(buffer, "\\");
                 strcpy(bounds[bounds_count++], buffer);
             }
-            goto input_parsing_start;
+            buffer_loaded = 1;
         }
   
         else {
