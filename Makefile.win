@@ -1,30 +1,14 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -g
-BUILD_DIR = build
 BIN = lp.exe
 
-$(BUILD_DIR)/stack.o: src/stack.c
-    $(CC) -c $(CFLAGS) -o $@ $<
+SRC_DIR = src
 
-$(BUILD_DIR)/parser.o: src/parser.c
-    $(CC) -c $(CFLAGS) -o $@ $<
+OBJ = $(SRC_DIR)/stack.obj $(SRC_DIR)/parser.obj $(SRC_DIR)/simplex.obj $(SRC_DIR)/queue.obj $(SRC_DIR)/main.obj
 
-$(BUILD_DIR)/simplex.o: src/simplex.c
-    $(CC) -c $(CFLAGS) -o $@ $<
+$(SRC_DIR)/%.obj: $(SRC_DIR)/%.c
+    cl /c /Fo$@ $<
 
-$(BUILD_DIR)/queue.o: src/queue.c
-    $(CC) -c $(CFLAGS) -o $@ $<
-
-$(BUILD_DIR)/main.o: src/main.c
-    $(CC) -c $(CFLAGS) -o $@ $<
-
-$(BUILD_DIR):
-    if not exist $(BUILD_DIR) mkdir $(BUILD_DIR)
+$(BIN): $(OBJ)
+    cl $(OBJ) /Fe$(BIN)
 
 clean:
-    if exist $(BUILD_DIR) rmdir /S /Q $(BUILD_DIR)
-    del /F /Q $(BIN)
-
-# Podle zadání semestrální práce (cíl je možné přidat jako závislost cíle `all`).
-install: $(BUILD_DIR)/$(BIN)
-    copy $(BUILD_DIR)\$(BIN) .\$(BIN)
+    del /F /Q $(SRC_DIR)\*.obj $(BIN)
