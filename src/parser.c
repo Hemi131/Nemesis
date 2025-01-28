@@ -40,6 +40,10 @@ int remove_substr(char *str, const char *substr) {
     char *pos, *temp;
     size_t len = strlen(substr);
 
+    if (!str || !substr) {
+        return 0;
+    }
+
     temp = malloc(strlen(str) + 1);
     if (!temp) {
         return 0;
@@ -59,12 +63,14 @@ int remove_substr(char *str, const char *substr) {
 }
 
 int can_be_var(const char *str) {
-    size_t i;
 
-    for (i = 0; str[i] != '\0'; i++) {
-        if ((str[i] == '+' || str[i] == '-' || str[i] == '*' || str[i] == '/' || str[i] == '(' || str[i] == ')' || str[i] == '{' || str[i] == '}' || str[i] == '.' || str[i] == ':' || str[i] == '<' || str[i] == '>' || str[i] == '=')) {
-            return 0;
-        }
+    if (!str) {
+        return 0;
+    }
+
+    /* Zkontroluje, jestli není nějaký nepovolený znak ve vstupním řetězci. */
+    if (strpbrk(str, INVALID_VAR_CHARS) != NULL) {
+        return 0;
     }
 
     return 1;
@@ -74,8 +80,12 @@ int check_valid_chars(const char *str, char *unknown_var) {
     size_t i;
     int error = 0;
 
+    if (!str || !unknown_var) {
+        return 0;
+    }
+
     for (i = 0; str[i] != '\0'; i++) {
-        if (!((str[i] >= '0' && str[i] <= '9') || str[i] == '+' || str[i] == '-' || str[i] == '*' || str[i] == '/' || str[i] == '(' || str[i] == ')' || str[i] == '{' || str[i] == '}' || str[i] == '.')) {
+        if (strchr(VALID_CHARS, str[i]) == NULL) {
             /* Byl nalezen nepovolený znak. */
             strcpy(unknown_var, str + i);
             error = 1;
@@ -87,11 +97,12 @@ int check_valid_chars(const char *str, char *unknown_var) {
         /* Extrakce neznámého výrazu, který může být proměnná, ale nemusí.
            Bude se později testovat. */
         for (i = 0; unknown_var[i] != '\0'; i++) {
-            if ((unknown_var[i] == '+' || unknown_var[i] == '-' || unknown_var[i] == '*' || unknown_var[i] == '/' || unknown_var[i] == '(' || unknown_var[i] == ')' || unknown_var[i] == '{' || unknown_var[i] == '}' || unknown_var[i] == '.')) {
+            if (strchr(VALID_OPERATORS, unknown_var[i]) != NULL) {
                 unknown_var[i] = '\0';
                 break;
-            }
+            }   
         }
+
         return 0;
     }
 
@@ -99,9 +110,13 @@ int check_valid_chars(const char *str, char *unknown_var) {
 }
 
 void replace_substr(char* str, const char* substr, const char* replacement) {
-    char ans[MAX_CHARS] = { 0 };
+    char ans[MAX_CHARS] = {0};
     int ans_idx = 0;
     size_t i, j, k, l;
+
+    if (!str || !substr || !replacement) {
+        return;
+    }
  
     for (i = 0; i < strlen(str); i++) {
         k = 0;
@@ -140,6 +155,10 @@ void replace_substr(char* str, const char* substr, const char* replacement) {
 void replace_substr_with_end(char *str, const char *substr) {
     char *pos;
 
+    if (!str || !substr) {
+        return;
+    }
+
     pos = strstr(str, substr);
     if (pos != NULL) {
         pos[0] = '\0';
@@ -148,6 +167,10 @@ void replace_substr_with_end(char *str, const char *substr) {
 
 void sort_str_by_len(char *arr[], size_t n) {
     size_t i, j;
+
+    if (!arr) {
+        return;
+    }
 
     for (i = 0; i < n - 1; i++) {
         for (j = 0; j < n - i - 1; j++) {
@@ -164,6 +187,10 @@ void replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
     size_t i, j;
     char buffer[MAX_CHARS];
     char **vars_sorted;
+
+    if (!str || !vars || !*vars || vars_count == 0) {
+        return;
+    }
 
     vars_sorted = malloc(vars_count * sizeof(char *));
     if (!vars_sorted) {
@@ -191,6 +218,10 @@ void replace_vars_by_index(char *str, char **vars, const size_t vars_count) {
 }
 
 int prepare_expression(char *str, char **vars, const size_t vars_count, char* unknown_var) {
+
+    if (!str || !vars || !*vars || vars_count == 0 || !unknown_var) {
+        return EXIT_FAILURE;
+    }
 
     /* Kontrola uzávorkování. */
     if (!check_brackets(str)) {
@@ -311,7 +342,7 @@ void change_brackets(char *str) {
 struct rpn_item rpn_item_create_number(mat_num_type number) {
     struct rpn_item rpn_item;
 
-    rpn_item.type = 'd';
+    rpn_item.type = RPN_TYPE_NUMBER;
     rpn_item.data.number = number;
 
     return rpn_item;
@@ -320,7 +351,7 @@ struct rpn_item rpn_item_create_number(mat_num_type number) {
 struct rpn_item rpn_item_create_variable(size_t variable) {
     struct rpn_item rpn_item;
 
-    rpn_item.type = 'v';
+    rpn_item.type = RPN_TYPE_VARIABLE;
     rpn_item.data.variable = variable;
 
     return rpn_item;
@@ -329,7 +360,7 @@ struct rpn_item rpn_item_create_variable(size_t variable) {
 struct rpn_item rpn_item_create_operator_first_level(char operator) {
     struct rpn_item rpn_item;
 
-    rpn_item.type = '1';
+    rpn_item.type = RPN_TYPE_OPERATOR1;
     rpn_item.data.operator = operator;
 
     return rpn_item;
@@ -338,7 +369,7 @@ struct rpn_item rpn_item_create_operator_first_level(char operator) {
 struct rpn_item rpn_item_create_operator_second_level(char operator) {
     struct rpn_item rpn_item;
 
-    rpn_item.type = '2';
+    rpn_item.type = RPN_TYPE_OPERATOR2;
     rpn_item.data.operator = operator;
 
     return rpn_item;
@@ -347,7 +378,7 @@ struct rpn_item rpn_item_create_operator_second_level(char operator) {
 struct rpn_item rpn_item_create_bracket(char bracket) {
     struct rpn_item rpn_item;
 
-    rpn_item.type = 'b';
+    rpn_item.type = RPN_TYPE_BRACKET;
     rpn_item.data.bracket = bracket;
 
     return rpn_item;
@@ -367,7 +398,7 @@ struct evaluation_expression create_evaluation_expression_variable(const size_t 
 
     new_expr.constant = 0.0;
     new_expr.var_count = var_count;
-    new_expr.var_koeficients[variable_index] = 1.0;
+    new_expr.var_coeficients[variable_index] = 1.0;
 
     return new_expr;
 }
@@ -381,7 +412,7 @@ struct evaluation_expression add_evaluation_expressions(struct evaluation_expres
     if (expr1.var_count || expr2.var_count) {
         new_expr.var_count = expr1.var_count > expr2.var_count ? expr1.var_count : expr2.var_count;
         for (i = 0; i < new_expr.var_count; i++) {
-            new_expr.var_koeficients[i] = expr1.var_koeficients[i] + expr2.var_koeficients[i];
+            new_expr.var_coeficients[i] = expr1.var_coeficients[i] + expr2.var_coeficients[i];
         }
     }
 
@@ -401,13 +432,13 @@ struct evaluation_expression multiply_evaluation_expressions(struct evaluation_e
     else if (expr1.var_count && !expr2.var_count) {
         new_expr.var_count = expr1.var_count > expr2.var_count ? expr1.var_count : expr2.var_count;
         for (i = 0; i < new_expr.var_count; i++) {
-            new_expr.var_koeficients[i] = expr1.var_koeficients[i] * expr2.constant;
+            new_expr.var_coeficients[i] = expr1.var_coeficients[i] * expr2.constant;
         }
     }
     else if (!expr1.var_count && expr2.var_count) {
         new_expr.var_count = expr1.var_count > expr2.var_count ? expr1.var_count : expr2.var_count;
         for (i = 0; i < new_expr.var_count; i++) {
-            new_expr.var_koeficients[i] = expr2.var_koeficients[i] * expr1.constant;
+            new_expr.var_coeficients[i] = expr2.var_coeficients[i] * expr1.constant;
         }
     }
     else {
@@ -426,7 +457,7 @@ struct evaluation_expression sub_evaluation_expressions(struct evaluation_expres
     if (expr1.var_count || expr2.var_count) {
         new_expr.var_count = expr1.var_count > expr2.var_count ? expr1.var_count : expr2.var_count;
         for (i = 0; i < new_expr.var_count; i++) {
-            new_expr.var_koeficients[i] = expr1.var_koeficients[i] - expr2.var_koeficients[i];
+            new_expr.var_coeficients[i] = expr1.var_coeficients[i] - expr2.var_coeficients[i];
         }
     }
 
@@ -452,7 +483,7 @@ struct evaluation_expression divide_evaluation_expressions(struct evaluation_exp
     if (expr1.var_count) {
         new_expr.var_count = expr1.var_count;
         for (i = 0; i < new_expr.var_count; i++) {
-            new_expr.var_koeficients[i] = expr1.var_koeficients[i] / expr2.constant;
+            new_expr.var_coeficients[i] = expr1.var_coeficients[i] / expr2.constant;
         }
     }
     
@@ -498,11 +529,11 @@ struct queue *parse_to_rpn(const char *str) {
         }
     }
 
-    last_rpn_item.type = '0';
+    last_rpn_item.type = -1;
     for (i = 0; str[i] != '\0'; i++) {
         switch (str[i]) {
             case '(':
-                if (last_rpn_item.type == 'd' || (last_rpn_item.type == 'b' && last_rpn_item.data.bracket == ')')) {
+                if (last_rpn_item.type == RPN_TYPE_NUMBER || (last_rpn_item.type == RPN_TYPE_BRACKET && last_rpn_item.data.bracket == ')')) {
 
                     rpn_item = rpn_item_create_operator_second_level('*');
 
@@ -520,7 +551,7 @@ struct queue *parse_to_rpn(const char *str) {
                 last_rpn_item = rpn_item;
                 break;
             case ')':
-                while (stack_pop(s, &rpn_item) && rpn_item.type != 'b') {
+                while (stack_pop(s, &rpn_item) && rpn_item.type != RPN_TYPE_BRACKET) {
                     if (!queue_enqueue(q, &rpn_item)) {
                         goto queue_failed;
                     }
@@ -530,7 +561,7 @@ struct queue *parse_to_rpn(const char *str) {
                 break;
             case '+':
             case '-':
-                if (last_rpn_item.type == 'b' && last_rpn_item.data.bracket == '(') {
+                if (last_rpn_item.type == RPN_TYPE_BRACKET && last_rpn_item.data.bracket == '(') {
                     rpn_item = rpn_item_create_number(0.0);
 
                     if (!queue_enqueue(q, &rpn_item)) {
@@ -538,7 +569,7 @@ struct queue *parse_to_rpn(const char *str) {
                     }
                 }
 
-                while (stack_head(s, &rpn_item) && rpn_item.type == '2') {
+                while (stack_head(s, &rpn_item) && rpn_item.type == RPN_TYPE_OPERATOR2) {
                     if (!stack_pop(s, &rpn_item)) {
                         goto stack_failed;
                     }
@@ -566,7 +597,7 @@ struct queue *parse_to_rpn(const char *str) {
                 last_rpn_item = rpn_item;
                 break;
             case '{':
-                if (last_rpn_item.type == 'd') {
+                if (last_rpn_item.type == RPN_TYPE_NUMBER) {
                     rpn_item = rpn_item_create_operator_second_level('*');
 
                     if (!stack_push(s, &rpn_item)) {
@@ -670,9 +701,9 @@ end:
 
     while (queue_dequeue(rpn, &rpn_item)) {
         switch (rpn_item.type) {
-            case 'd':
-            case 'v':
-                if (rpn_item.type == 'v') {
+            case RPN_TYPE_NUMBER:
+            case RPN_TYPE_VARIABLE:
+                if (rpn_item.type == RPN_TYPE_VARIABLE) {
                     expr1 = create_evaluation_expression_variable(var_count, rpn_item.data.variable);
                 }
                 else {
@@ -684,8 +715,8 @@ end:
                     goto rpn_evaluate_failed;
                 }
                 break;
-            case '1':
-            case '2':
+            case RPN_TYPE_OPERATOR1:
+            case RPN_TYPE_OPERATOR2:
                 if (!stack_pop(s, &expr2) || !stack_pop(s, &expr1)) {
                     error_code = EXIT_FAILURE;
                     goto rpn_evaluate_failed;

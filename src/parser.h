@@ -29,6 +29,10 @@
 #define MAXIMIZE 1
 #define MINIMIZE -1
 
+#define INVALID_VAR_CHARS ":<>="
+#define VALID_CHARS "0123456789+-*/(){}."
+#define VALID_OPERATORS "+-*/(){}."
+
 /**
  * \brief Funkce provede parsování argumentů příkazové řádky.
  * \param `argc` Počet argumentů.
@@ -105,12 +109,22 @@ void replace_vars_by_index(char *str, char **vars, const size_t vars_count);
 int prepare_expression(char *str, char **vars, const size_t vars_count, char *unknown_var);
 
 /**
+ * \brief Enumerace pro typ prvku v reverzní polské notaci.
+ */
+typedef enum {
+    RPN_TYPE_NUMBER,    /* number */
+    RPN_TYPE_VARIABLE,  /* variable */
+    RPN_TYPE_OPERATOR1, /* operator level 1 */
+    RPN_TYPE_OPERATOR2, /* operator level 2 */
+    RPN_TYPE_BRACKET    /* bracket */
+} rpn_item_type;
+
+/**
  * \brief Struktura pro reprezentaci prvku v reverzní polské notaci.
  * Prvek může být číslo, proměnná nebo operátor.
- * 'd' - number, 'v' - variable, '1' - operator level 1 , '2' - operator level 2, 'b' - bracket
  */
 struct rpn_item {
-    char type; /* 'd' - number, 'v' - variable, '1' - operator level 1 , '2' - operator level 2, 'b' - bracket */
+    rpn_item_type type;
     union rpn_item_data {
         mat_num_type number;
         size_t variable;  /* index of variable in vector of allowed variables */
@@ -161,7 +175,7 @@ struct rpn_item rpn_item_create_bracket(char bracket);
  */
 struct evaluation_expression {
     mat_num_type constant;
-    mat_num_type var_koeficients[MAX_VAR_COUNT];
+    mat_num_type var_coeficients[MAX_VAR_COUNT];
     size_t var_count;
 };
 

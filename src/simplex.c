@@ -212,7 +212,7 @@ int simplex(struct problem_data *data) {
         /* Pokud je pravá strana rovnice negativní, vynásobení rovnice -1 a otočení znaménka. */
         if ((data->subjects_expr[i]).constant > 0.0) {
             for (j = 0; j < data->allowed_vars_count; j++) {
-                (data->subjects_expr[i]).var_koeficients[j]   *= -1.0;
+                (data->subjects_expr[i]).var_coeficients[j]   *= -1.0;
             }
             (data->subjects_expr[i]).constant *= -1.0;
 
@@ -221,7 +221,7 @@ int simplex(struct problem_data *data) {
         /* Pokud je pravá strana rovnice rovna 0 a operátor rovnice je >=, vynásobení rovnice -1 a otočení znaménka. */
         else if ((data->subjects_expr[i]).constant == 0.0 && data->subjects_op[i] == 1) {
             for (j = 0; j < data->allowed_vars_count; j++) {
-                (data->subjects_expr[i]).var_koeficients[j]   *= -1.0;
+                (data->subjects_expr[i]).var_coeficients[j]   *= -1.0;
             }
             (data->subjects_expr[i]).constant *= -1.0;
 
@@ -235,7 +235,7 @@ int simplex(struct problem_data *data) {
         /* Pokud je pravá strana rovnice negativní, vynásobení rovnice -1 a otočení znaménka. */
         if ((data->bounds_expr[i]).constant > 0.0) {
             for (j = 0; j < data->allowed_vars_count; j++) {
-                (data->bounds_expr[i]).var_koeficients[j]   *= -1.0;
+                (data->bounds_expr[i]).var_coeficients[j]   *= -1.0;
             }
             (data->bounds_expr[i]).constant *= -1.0;
 
@@ -244,7 +244,7 @@ int simplex(struct problem_data *data) {
         /* Pokud je pravá strana rovnice rovna 0 a operátor rovnice je >=, vynásobení rovnice -1 a otočení znaménka. */
         else if ((data->bounds_expr[i]).constant == 0.0 && data->bounds_op[i] == 1) {
             for (j = 0; j < data->allowed_vars_count; j++) {
-                (data->bounds_expr[i]).var_koeficients[j]   *= -1.0;
+                (data->bounds_expr[i]).var_coeficients[j]   *= -1.0;
             }
             (data->bounds_expr[i]).constant *= -1.0;
 
@@ -302,7 +302,7 @@ int simplex(struct problem_data *data) {
     /* Naplnění simplexové tabulky daty Subject to. */
     for (i = 0; i < data->subjects_count; i++) {
         for (j = 0; j < data->allowed_vars_count; j++) {
-            matrix_set(mat, i, j, data->subjects_expr[i].var_koeficients[j]);
+            matrix_set(mat, i, j, data->subjects_expr[i].var_coeficients[j]);
         }
         matrix_set(mat, i, cols_count - 1, -1.0 * data->subjects_expr[i].constant); /* kvůli přehození na druhou stranu */
     }
@@ -310,7 +310,7 @@ int simplex(struct problem_data *data) {
     /* Naplnění simplexové tabulky daty Bounds. */
     for (i = 0; i < data->bounds_count; i++) {
         for (j = 0; j < data->allowed_vars_count; j++) {
-            matrix_set(mat, i + data->subjects_count, j, data->bounds_expr[i].var_koeficients[j]);
+            matrix_set(mat, i + data->subjects_count, j, data->bounds_expr[i].var_coeficients[j]);
         }
         matrix_set(mat, i + data->subjects_count, cols_count - 1, -1.0 * data->bounds_expr[i].constant);  /* kvůli přehození na druhou stranu  */
     }
@@ -323,7 +323,7 @@ int simplex(struct problem_data *data) {
     /* Naplnění pole koeficientů původních proměnných účelové funkce. 
        Při minimalizaci jsou obráceny koeficienty původních proměnných účelové funkce. */
     for (i = 0; i < data->purpose_expr.var_count; i++) {
-        object_to[i] = problem_type_coeficient * data->purpose_expr.var_koeficients[i];
+        object_to[i] = problem_type_coeficient * data->purpose_expr.var_coeficients[i];
     }
 
     /* Naplnění pole koeficientů pomocných proměnných účelové funkce a simplexové tabulky. */

@@ -21,18 +21,20 @@
 #define MAX_ITERATIONS_COUNT 100
 
 /**
- * \brief Procedura provede normalizaci řádku `row` matice `mat` podle sloupce `col`.
+ * \brief Funkce provede normalizaci řádku `row` matice `mat` podle sloupce `col`.
  * \param `*mat` Ukazatel na instanci struktury `matrix`, nad kterou bude operace provedena.
  * \param `row` Index řádku matice.
  * \param `col` Index sloupce matice.
+ * \return int 1, pokud proběhla v pořádku, jinak 0.
  */
 int _matrix_normalize_row_by_col(struct matrix *mat, size_t row, size_t col);
 
 /**
- * \brief Procedura provede pivotaci matice `mat` podle řádku `row` a sloupce `col`.
+ * \brief Funkce provede pivotaci matice `mat` podle řádku `row` a sloupce `col`.
  * \param `*mat` Ukazatel na instanci struktury `matrix`, nad kterou bude operace provedena.
  * \param `row` Index řádku matice.
  * \param `col` Index sloupce matice.
+ * \return int 1, pokud proběhla v pořádku, jinak 0.
  */
 int _matrix_pivoting(struct matrix *mat, size_t row, size_t col);
 
