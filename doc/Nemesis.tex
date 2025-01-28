@@ -1,0 +1,508 @@
+\documentclass[czech, sem, kiv, he, pdf, viewonly]{fasthesis}
+\usepackage{float}
+\title{Nástroj pro řešení úloh lineárního programování}
+\author{Filip}{Nehéz}{}{}
+\signdate{28}{12}{2024}{Plzeň}
+\addbibresource{Nemesis.bib}
+
+\begin{document}
+\frontpages[notm]
+\tableofcontents
+%
+%
+%
+%--------ÚVOD
+%
+%
+%
+\chapter{Úvod}
+Tato semestrální práce se zaměřuje na návrh a implementaci programu, který řeší úlohy lineárního programování. Lineární programování je klíčovou oblastí matematické optimalizace, která nachází široké uplatnění v průmyslu, logistice, financích a dalších oblastech.
+
+Optimalizace je nezbytná pro efektivní využití zdrojů a zlepšení rozhodovacích procesů. Lineární programování umožňuje nalézt nejlepší hodnotu účelové funkce při splnění řady omezujících podmínek. Program Nemesis je navržen tak, aby poskytoval efektivní a spolehlivé řešení těchto úloh.
+
+Cílem této práce je vytvořit nástroj, který:
+\begin{itemize}
+    \item Načte vstupní data ve formátu LP.
+    \item Provede syntaktickou analýzu vstupních dat.
+    \item Provede optimalizaci.
+    \item Ošetří specifické scénáře, jako je neomezenost nebo neřešitelnost úlohy.
+    \item Generuje výstup, který poskytuje uživateli přehledné a srozumitelné výsledky.
+\end{itemize}
+%
+%
+%
+%--------ZADÁNÍ
+%
+%
+%
+\chapter{Zadání}
+Naprogramujte v jazyce ANSI C přenositelnou konzolovou aplikaci, která bude řešit úlohy lineárního programování zadané ve zjednodušeném formátu LP.
+Program bude spouštěn příkazem lp.exe s kombinací následujících argumentů – výrazy v lomených závorkách (<>), resp. hranatých závorkách ([]) označují povinné, resp. nepovinné argumenty:
+
+<input-file> Soubor s popisem úlohy ve formátu LP. V případě, že uživatel zadá neexistující soubor, program vypíše chybové hlášení "Input file not found!\verb|\n|"
+a vrátí hodnotu 1.
+
+-o <path> Výstupní soubor s řešením úlohy. Pokud umístění neexistuje, bude vypsáno hlášení "Invalid output destination!\verb|\n|" a program skončí s návratovou hodnotou 2. V případě, že uživatel tento přepínač nezadá, bude výsledek optimalizace vypsán na obrazovku. Do tohoto souboru neuvádějte chybová hlášení.
+
+--output <path> Stejné jako v případě přepínače -o. Použití obou přepínačů -o a --output není chybou, program pak bude akceptovat poslední zadanou hodnotu.
+%\\
+
+V případě nalezení konečného optimálního řešení úlohy program vrátí hodnotu \verb|EXIT_SUCCESS|. Chybové stavy týkající se zpracování vstupních souborů nebo samotného algoritmu optimalizace
+jsou popsány v dalších sekcích.
+%\\
+
+Hotovou práci odevzdejte v jediném archivu typu ZIP prostřednictvím automatického odevzdávacího a validačního systému. Postupujte podle instrukcí uvedených na webu předmětu. Archiv nechť obsahuje všechny zdrojové soubory potřebné k přeložení programu, Makefile pro Windows i Linux (pro překlad v Linuxu připravte soubor pojmenovaný Makefile a pro Windows Makefile.win)
+a dokumentaci ve formátu PDF vytvořenou v typografickém systému TEX (LATEX). Bude-li některá z částí chybět, kontrolní skript Vaši práci odmítne.
+%
+%
+%
+%--------ANALÝZA ÚLOHY
+%
+%
+%
+\chapter{Analýza úlohy}
+\section{Obecný popis úlohy}
+
+Úloha zadává návrh programu pro řešení problémů lineárního programování (LP), což je klíčová oblast matematické optimalizace. Lineární programování má široké využití v průmyslu, logistice, financích a dalších oblastech, kde je potřeba optimalizovat procesy za přísných omezení. Cílem je vytvořit nástroj, který umožní automatické řešení těchto problémů na základě vstupních dat ve specifickém formátu.
+
+\subsection{Lineární programování}
+Lineární programování je metoda optimalizace, jejímž cílem je nalézt nejlepší hodnotu účelové funkce, která je lineární, při splnění řady omezujících podmínek, jež jsou také vyjádřeny jako lineární rovnice nebo nerovnice. Typické prvky problému LP zahrnují:
+\begin{itemize}
+    \item \textbf{Účelovou funkci:} Lineární výraz, který je potřeba maximalizovat nebo minimalizovat, například:
+    \[
+    z = c_1x_1 + c_2x_2 + \dots + c_nx_n,
+    \]
+    kde \(c_i\) jsou koeficienty a \(x_i\) rozhodovací proměnné.
+    \item \textbf{Omezující podmínky:} Lineární rovnice nebo nerovnice, které vymezují přípustnou oblast řešení, např.:
+    \[
+    a_{11}x_1 + a_{12}x_2 \leq b_1, \quad x_1 \geq 0, \quad x_2 \geq 0.
+    \]
+    \item \textbf{Nezápornost proměnných:} Rozhodovací proměnné \(x_1, x_2, \dots, x_n\) bývají obvykle omezeny na kladné hodnoty.
+\end{itemize}
+
+\subsection{Praktické aspekty úlohy}
+Úloha není pouze akademická, ale má významné praktické uplatnění. Příkladem může být:
+\begin{itemize}
+    \item Optimalizace výroby v podniku, kde jsou omezené zdroje, jako pracovní čas, materiály nebo energie.
+    \item Plánování logistiky, zahrnující minimalizaci přepravních nákladů při splnění požadavků na dodávky.
+    \item Finanční optimalizace, např. maximalizace výnosů investičního portfolia při omezeném riziku.
+\end{itemize}
+
+\section{Analýza specifického zadání}
+
+V této úloze je úkolem vytvořit program, který:
+\begin{enumerate}
+    \item \textbf{Načte vstupní data ve formátu LP:} Tato data zahrnují účelovou funkci, omezující podmínky, omezení proměnných a další klíčové prvky.
+    \item \textbf{Vyřeší optimalizační problém:} Použije se algoritmus, jako je simplexová metoda, pro nalezení optimálního řešení.
+    \item \textbf{Zpracuje specifické scénáře:}
+    \begin{itemize}
+        \item Identifikace neomezeného řešení (např. účelová funkce může růst do nekonečna).
+        \item Zjištění neexistence přípustného řešení (např. podmínky nemají průnik).
+        \item Výpočet optimální hodnoty účelové funkce a odpovídajících hodnot proměnných.
+    \end{itemize}
+    \item \textbf{Generuje výstup:} Výstup může být zobrazen na obrazovce nebo uložen do souboru.
+\end{enumerate}
+
+\subsection{Syntaktická analýza vstupního souboru}
+
+Syntaktická analýza vstupního souboru je klíčovou částí programu, která zajišťuje správné načtení a interpretaci vstupních dat ve formátu LP. Tento proces zahrnuje několik kroků, které jsou nezbytné pro úspěšné zpracování vstupního souboru a přípravu dat pro optimalizační algoritmus. V následujících odstavcích provedu úvahu o způsobech provedení syntaktické analýzy.
+
+\paragraph{Syntaktická analýza tokenizací}
+Tokenizace je proces, při kterém je vstupní text rozdělen na jednotlivé tokeny, což jsou základní stavební kameny, jako jsou klíčová slova, operátory, proměnné a čísla. Tento krok je důležitý pro identifikaci a klasifikaci jednotlivých částí vstupního souboru. Tokenizace však může být složitá, pokud nejsou tokeny jednoznačně odděleny mezerami nebo jinými oddělovači.
+
+\paragraph{Shunting Yard algoritmus}
+Shunting Yard algoritmus, vyvinutý Edsgerem Dijkstrou, je efektivní metoda pro převod infixových výrazů na postfixové (reverzní polskou notaci, RPN). Tento algoritmus je vhodný pro syntaktickou analýzu matematických výrazů, protože dokáže správně zpracovat operátory s různou prioritou a závorky.
+
+\paragraph{Porovnání tokenizace a Shunting Yard algoritmu}
+Při porovnání tokenizace a Shunting Yard algoritmu je zřejmé, že Shunting Yard algoritmus nabízí několik výhod. Zatímco tokenizace je základním krokem pro rozdělení vstupního textu, Shunting Yard algoritmus poskytuje strukturovaný přístup k syntaktické analýze matematických výrazů. Tento algoritmus zajišťuje správné pořadí operací a zpracování závorek, což je klíčové pro správnou interpretaci a vyhodnocení výrazů.
+
+\paragraph{Výběr Shunting Yard algoritmu}
+Na základě výše uvedeného porovnání jsem se rozhodl použít Shunting Yard algoritmus pro syntaktická analýza vstupního souboru. Tento algoritmus nám umožňuje efektivně a správně zpracovat matematické výrazy, které jsou součástí účelové funkce a omezujících podmínek. Ovšem základy tokenizace se využijí i při tomto postupu syntaktické analýzy.
+
+\subsection{Optimalizační proces}
+Optimalizační proces je klíčovou součástí programu, která se zaměřuje na nalezení nejlepšího možného řešení dané úlohy lineárního programování. Tento proces zahrnuje několik metod a technik, které jsou použity k dosažení optimálního výsledku. V následujících odstavcích provedu úvahu o způsobech provedení optimalizace.
+
+\paragraph{Simplexová metoda}
+Simplexová metoda je jednou z nejznámějších a nejpoužívanějších metod pro řešení úloh lineárního programování. Tato metoda iterativně prochází vrcholy mnohostěnu, který představuje množinu přípustných řešení, a hledá optimální řešení na hranicích tohoto mnohostěnu. Simplexová metoda je efektivní a často se používá v praxi, ale může selhat v případě degenerovaných úloh.
+
+\paragraph{Interiérové metody}
+Interiérové metody, také známé jako metody vnitřního bodu, jsou alternativou k simplexové metodě. Tyto metody procházejí vnitřkem množiny přípustných řešení a hledají optimální řešení pomocí iterativních kroků. Interiérové metody jsou často rychlejší než simplexová metoda pro velké úlohy, ale mohou být složitější na implementaci.
+
+\paragraph{Metoda velkého M (The Big M Method)}
+Metoda velkého M je varianta simplexové metody, která se používá pro řešení úloh s umělými proměnnými. Tato metoda přidává velké penalizační hodnoty (M) k umělým proměnným v účelové funkci, což zajišťuje, že umělé proměnné budou v optimálním řešení nulové. Metoda velkého M je efektivní a snadno implementovatelná, což ji činí vhodnou volbou pro mnoho praktických úloh.
+
+\paragraph{Výběr metody velkého M}
+Na základě porovnání různých optimalizačních metod jsem se rozhodl použít metodu velkého M pro řešení zadané optimalizační úlohy. Tato metoda nabízí jednoduchou implementaci a efektivní řešení úloh s umělými proměnnými. Použití metody velkého M zajišťuje, že náš program bude schopen rychle a správně nalézt optimální řešení pro širokou škálu úloh lineárního programování a určit řešitelnost úlohy.
+%
+%
+%
+%--------POPIS IMPLEMENTACE
+%
+%
+%
+\chapter{Popis implementace}
+Tato kapitola poskytuje podrobný popis implementace programu Nemesis, který řeší úlohy lineárního programování pomocí simplexové metody s velkým M. Program je napsán v jazyce ANSI C a skládá se z několika modulů, které spolupracují na načtení, zpracování a vyřešení optimalizační úlohy.
+
+\section{Struktura programu}
+Program je rozdělen do několika souborů, z nichž každý má specifickou funkci:
+\begin{itemize}
+    \item \texttt{main.c}: Hlavní vstupní bod programu.
+    \item \texttt{parser.c} a \texttt{parser.h}: Modul pro parsování vstupního souboru a přípravu dat pro optimalizační algoritmus.
+    \item \texttt{simplex.c} a \texttt{simplex.h}: Implementace simplexové metody s velkým M.
+    \item \texttt{matrix.c} a \texttt{matrix.h}: Modul pro práci s maticemi.
+    \item \texttt{queue.c} a \texttt{queue.h}: Implementace frontové struktury.
+    \item \texttt{stack.c} a \texttt{stack.h}: Implementace zásobníkové struktury.
+\end{itemize}
+
+\section{Hlavní modul}
+Soubor \texttt{main.c} obsahuje hlavní funkci programu, která provádí následující kroky:
+\begin{enumerate}
+    \item Parsování argumentů příkazové řádky pomocí funkce \texttt{args\_parser}.
+    \item Načtení a parsování vstupního souboru pomocí funkce \texttt{input\_parser}.
+    \item Použití simplexového algoritmu k vyřešení optimalizační úlohy pomocí funkce \texttt{simplex}.
+    \item Výpis výsledků na standardní výstup nebo do souboru pomocí funkce \texttt{printResults}.
+\end{enumerate}
+
+\section{Modul pro syntaktickou analýzu}
+
+Modul \texttt{parser.c} je zodpovědný za syntaktickou analýzu vstupního souboru ve formátu LP a přípravu dat pro optimalizační algoritmus. Tento modul zahrnuje několik klíčových kroků a struktur, které jsou nezbytné pro správné načtení a interpretaci vstupních dat.
+
+\subsection{Klíčové struktury}
+
+\begin{itemize}
+    \item \texttt{struct problem\_data}: Tato struktura obsahuje veškerá data potřebná pro řešení optimalizační úlohy, včetně účelové funkce, podmínek, omezení a výsledků.
+    \item \texttt{struct rpn\_item}: Tato struktura reprezentuje prvek v reverzní polské notaci (RPN). Prvek může být číslo, proměnná nebo operátor.
+    \item \texttt{struct evaluation\_expression}: Tato struktura slouží k vyhodnocení matematických výrazů. Obsahuje konstantu a koeficienty proměnných.
+\end{itemize}
+
+\subsection{Shunting Yard algoritmus}
+
+Shunting Yard algoritmus, vyvinutý Edsgerem Dijkstrou, je klíčovou součástí modulu pro syntaktickou analýzu. Tento algoritmus je použit pro převod infixových výrazů na postfixové (reverzní polskou notaci, RPN), což usnadňuje jejich vyhodnocení. Algoritmus zajišťuje správné pořadí operací a zpracování závorek.
+
+\subsection{Klíčové kroky modulu}
+
+\begin{itemize}
+    \item \textbf{Syntaktická analýza argumentů}: Funkce \texttt{args\_parser} zpracovává argumenty příkazové řádky a identifikuje vstupní a výstupní soubory.
+    \item \textbf{Čtení vstupního souboru}: Funkce \texttt{input\_parser} čte vstupní soubor a extrahuje relevantní sekce, jako jsou účelová funkce, podmínky a omezení.
+    \item \textbf{Tokenizace}: Funkce \texttt{input\_parser} rozdělí vstupní sekce na jednotlivé komponenty. Např. levá a pravá strana rovnice, 
+    \item \textbf{Syntaktická analýza výrazu}: Tokenizované výrazy jsou převedeny do formátu, který může být vyhodnocen simplexovým algoritmem, pomocí Shunting Yard algoritmu.
+    \item \textbf{Vyhodnocení výrazu v RPN}: Funkce \texttt{rpn\_evaluate} vyhodnocuje výrazy v reverzní polské notaci a převádí je na strukturu \texttt{evaluation\_expression}.
+\end{itemize}
+
+\subsection{Detailní popis funkcí}
+
+\begin{itemize}
+    \item \texttt{args\_parser}: Tato funkce zpracovává argumenty příkazové řádky a identifikuje vstupní a výstupní soubory. Kontroluje správnost argumentů a vrací odpovídající kód chyby v případě nesprávného vstupu.
+    \item \texttt{input\_parser}: Tato funkce čte vstupní soubor a extrahuje relevantní sekce, jako jsou účelová funkce, podmínky a omezení. Data jsou ukládána do struktury \texttt{problem\_data}.
+    \item \texttt{prepare\_expression}: Tato funkce připravuje matematické výrazy k parsování do reverzní polské notace (RPN). Kontroluje správnost závorek a nahrazuje názvy proměnných jejich indexy.
+    \item \texttt{parse\_to\_rpn}: Tato funkce převádí infixové výrazy na RPN pomocí Shunting Yard algoritmu. Výsledkem je fronta \texttt{queue} obsahující prvky \texttt{rpn\_item}.
+    \item \texttt{rpn\_evaluate}: Tato funkce vyhodnocuje výrazy v RPN a převádí je na strukturu \texttt{evaluation\_expression}. Používá zásobníkovou strukturu \texttt{stack} pro dočasné ukládání mezivýsledků.
+\end{itemize}
+
+\subsection{Pseudokód Shunting Yard algoritmu}
+
+Níže je uveden pseudokód Shunting Yard algoritmu, který je použit v modulu pro syntaktickou analýzu:
+
+\begin{figure}[H]
+\begin{code}{python}{Pseudokód algoritmu Shunting Yard\label{lst:pseudoShunting}}
+1. Pro každý token ve vstupním výrazu:
+    a. Pokud je token číslo nebo proměnná, přidej ho do výstupní fronty.
+    b. Pokud je token operátor:
+        i. Dokud je na vrcholu zásobníku operátor s vyšší nebo stejnou prioritou, přesuň ho do výstupní fronty.
+        ii. Přidej aktuální operátor na zásobník.
+    c. Pokud je token levá závorka, přidej ji na zásobník.
+    d. Pokud je token pravá závorka:
+        i. Dokud není na vrcholu zásobníku levá závorka, přesuň operátory ze zásobníku do výstupní fronty.
+        ii. Odstraň levou závorku ze zásobníku.
+2. Přesuň všechny zbývající operátory ze zásobníku do výstupní fronty.
+\end{code}
+\end{figure}
+
+\section{Modul pro simplexovou metodu}
+Modul \texttt{simplex.c} obsahuje implementaci simplexové metody s velkým M. Tento modul je klíčový pro řešení úloh lineárního programování. Níže je uveden detailní popis hlavních algoritmů použitých v tomto modulu.
+
+\subsection{Inicializace simplexové tabulky}
+
+Inicializace simplexové tabulky je prvním krokem simplexové metody. Tento krok zahrnuje následující kroky:
+\begin{enumerate}
+    \item \textbf{Příprava matice omezení}: Matice omezení je sestavena z koeficientů omezení a přidání umělých proměnných.
+    \item \textbf{Příprava účelové funkce}: Účelová funkce je upravena tak, aby zahrnovala velké penalizační hodnoty (M) pro umělé proměnné.
+    \item \textbf{Sestavení počáteční simplexové tabulky}: Počáteční simplexová tabulka je sestavena z matice omezení a účelové funkce.
+\end{enumerate}
+
+\subsection{Pivotování}
+
+Pivotování je klíčový krok simplexové metody, který umožňuje přechod mezi vrcholy přípustné oblasti. Tento krok zahrnuje následující kroky:
+\begin{enumerate}
+    \item \textbf{Výběr pivotního sloupce}: Pivotní sloupec je vybrán při testu optimality, který je popsán v další sekci.
+    \item \textbf{Výběr pivotního řádku}: Pivotní řádek je vybrán na základě nejmenšího kladného podílu pravé strany a hodnoty pivotního sloupce.
+    \item \textbf{Provádění pivotních operací}: Pivotní operace zahrnují dělení pivotního řádku pivotním prvkem a následné úpravy ostatních řádků tak, aby se pivotní prvek stal jedničkou a ostatní prvky v pivotním sloupci se staly nulami. Tedy od každého nepivotního řádku je odečten příslušný násobek pivotního řádku. 
+\end{enumerate}
+
+\subsection{Test optimality}
+
+Test optimality je prováděn pro určení, zda je řešení aktuální iterace simplexové tabulky optimální, nebo jej lze dále vylepšit. Pokud algoritmus testu optimality odhalí, že aktuální řešení není optimální, současně určuje sloupec, který je pro optimalizaci nejvhodnější.
+
+Tetsovací hodnota se vypočítá jako rozdíl koeficientu příslušné proměnné sloupce a součtu násobků koeficientu bázové proměnné s hodnotou v daném sloupci a příslušném řádku.
+
+Testovací hodnota se počítá pro každý sloupec simplexové tabulky.
+Pokud je některá z testovacích hodnot pozitivní, aktuální řešení není optimální.
+
+Nejvhodnější sloupec pro optimalizaci je ten s největší pozitivní testovací hodnotou.
+
+\subsection{Ukončení algoritmu}
+
+Algoritmus simplexové metody je ukončen, když je dosaženo optimálního řešení a zároveň je báze validní, nebo byl-li přesažen maximální počet iterací simplexové tabulky. Validní bází problému se rozumí báze bez umělých proměnných.
+
+Algoritmus je ukončen, pokud by se v průběhu mělo dělit nulou, s návratovou hodnotou úlohy neexistujícího řešení.
+
+Pokud při pivotizaci nelze vybrat pivotní sloupec, je algoritmus ukončen s návratovou hodnotou úlohy s neomezeným řešením.
+
+Pokud se po ukončení simplexového algoritmu nalézají v bázi umělé proměnné, je toto řešení považováno za neplatné a je navrácena hodnota úlohy s neexistujícím řešením.
+
+\subsection{Pseudokód algoritmu simplexové metody}
+
+\begin{figure}[H]
+\begin{code}{C}{Pseudokód algoritmu simplexové tabulky\label{lst:pseudoSimplex}}
+1. Inicializace simplexové tabulky
+2. Opakuj, dokud (není dosaženo optimálního řešení nebo v bázi řešení stále figurují umělé proměnné) a zároveň nebyl přesažen maximální počet iterací taabulky:
+        a. Vyber pivotní sloupec
+        b. Vyber pivotní řádek
+        c. Proveď pivotní operace
+        d. Urči novou bázi.
+3. Kontrola báze řešení a ukončení algoritmu.
+\end{code}
+\end{figure}
+
+%
+%
+%
+%--------UŽIVATELSKÁ PŘÍRUČKA
+%
+%
+%
+\chapter{Uživatelská příručka}
+Tato kapitola poskytuje návod k použití programu Nemesis, včetně instrukcí pro přeložení a sestavení programu na různých operačních systémech, formátu vstupního souboru a ukázek běhu programu. Program Nemesis je navržen pro řešení optimalizačních úloh pomocí metody velkého M.
+
+\section{Přeložení a sestavení programu}
+V této sekci jsou uvedeny kroky pro přeložení a sestavení programu Nemesis na operačních systémech Linux a Windows. Pro každý operační systém jsou poskytnuty specifické instrukce a požadavky.
+
+\subsection{Linux OS s použitím GCC}
+Pro přeložení a sestavení programu Nemesis na Linuxu s použitím GCC postupujte podle následujících kroků:
+\begin{enumerate}
+    \item Ujistěte se, že máte nainstalovaný GCC. Můžete to ověřit příkazem ``\texttt{gcc --version}''.
+    \item Otevřete terminál a přejděte do adresáře s projektem Nemesis.
+    \item Spusťte příkaz ``\texttt{make}'' pro přeložení a sestavení programu. Tento příkaz použije ``\texttt{Makefile}'', který je součástí projektu, a vytvoří spustitelný soubor ``\texttt{lp.exe}'' v adresáři ``\texttt{build}'', který je zkopírován i do kořenového adresáře.
+\end{enumerate}
+
+\subsection{Windows OS s použitím MSVC}
+Pro přeložení a sestavení programu Nemesis na Windows s použitím Microsoft Visual C/C++ (MSVC) postupujte podle následujících kroků:
+\begin{enumerate}
+    \item Ujistěte se, že máte nainstalovaný Microsoft Visual Studio s podporou pro C/C++.
+    \item Otevřete Developer Command Prompt for Visual Studio a přejděte do adresáře s projektem Nemesis.
+    \item Spusťte příkaz ``\texttt{nmake -f Makefile.win}'' pro přeložení a sestavení programu. Tento příkaz použije ``\texttt{Makefile.win}'', který je součástí projektu, a vytvoří spustitelný soubor ``\texttt{lp.exe}'' v aktuálním adresáři.
+\end{enumerate}
+
+\section{Formát vstupního souboru}
+Pro zachycení optimalizačního modelu bude program používat redukovanou a zobecněnou verzi formátu LP, který je popsán na webu \url{https://docs.gurobi.com/projects/optimizer/en/current/reference/fileformats/modelformats.html}. Až na návěstí End není pořadí jednotlivých sekcí fixní. Vstupní soubory mohou obsahovat následující sekce:
+
+\paragraph{Maximize/Minimize}
+Výraz uvozující řádek se zápisem optimalizované účelové funkce. Program je schopen zpracovat standardní operátory $+$, $-$, $*$, $=$ nebo závorky $()$, $[]$ a $\{\}$. Oproti originální verzi ovšem nevyžaduje, aby jednotlivé operandy a operátory byly v matematických výrazech striktně odděleny mezerou (to platí i v ostatních sekcích souboru). Názvy proměnných tedy dříve uvedené operátory a závorky obsahovat nesmí. Při násobení není nutné použití operátoru $*$, například ``$2.5z$'' značí 2,5 krát $z$, zatímco ``$z2$'' je pouze název proměnné.
+
+\paragraph{Subject To}
+Sekce obsahující seznam podmínek ve formátu ``\texttt{<název>: <výraz>}''.
+Navíc oproti účelové funkci mohou podmínky obsahovat porovnávací
+operátory $<=$ a $>=$.
+
+\paragraph{Bounds}
+Omezení hodnot rozhodovacích proměnných. V této sekci jsou povoleny
+pouze porovnávací operátory uvedené výše.
+
+\paragraph{Generals}
+Obsahuje seznam použitých rozhodovacích proměnných oddělených znakem mezery.
+
+\paragraph{End}
+Uvozuje konec souboru, tzn. že se vyskytuje vždy jako poslední a sekce
+uvedené za ním jsou syntaktickou chybou.
+
+\subsection{Příklad vstupního souboru}
+\begin{figure}[H]
+\begin{code}{C}{Příklad vstupního souboru ve formátu LP\label{lst:demoLP}}
+\ pořadí není fixní
+Subject To
+ca: (-2var_x + 1 * var_y) >= 2
+cb: var_x - [2var_y] >= 2
+Minimize
+var_x - var_y
+Generals
+var_x var_y
+Bounds
+var_x >= 0
+var_y >= 0
+End
+\end{code}
+\end{figure}
+
+\section{Použití programu}
+Program \texttt{lp.exe} je konzolová aplikace, která řeší úlohy lineárního programování zadané ve zjednodušeném formátu LP.
+
+\subsection{Spuštění programu}
+Program lze spustit z příkazové řádky s následujícími argumenty:
+\begin{verbatim}
+lp.exe <input-file> [-o <output-file>] [--output <output-file>]
+\end{verbatim}
+
+\begin{itemize}
+    \item \texttt{<input-file>}: Povinný argument. Soubor s popisem úlohy ve formátu LP.
+    \item \texttt{-o <output-file>}: Nepovinný argument. Určuje výstupní soubor, do kterého bude zapsáno řešení úlohy. Pokud tento argument není zadán, výsledek optimalizace bude vypsán na obrazovku.
+    \item \texttt{--output <output-file>}: Nepovinný argument. Stejné jako v případě přepínače \texttt{-o}. Použití obou přepínačů \texttt{-o} a \texttt{--output} není chybou, program pak bude akceptovat poslední zadanou hodnotu.
+\end{itemize}
+
+\subsubsection*{Příklad spuštění}
+\begin{verbatim}
+lp.exe data.lp -o vysledek.txt
+\end{verbatim}
+
+Tento příkaz spustí program \texttt{lp.exe} s vstupním souborem \texttt{data.lp} a výstup bude zapsán do souboru \texttt{vysledek.txt}.
+
+\begin{verbatim}
+lp.exe data.lp --output vysledek.txt
+\end{verbatim}
+
+Tento příkaz má stejný efekt jako předchozí, protože přepínače \texttt{-o} a \texttt{--output} jsou ekvivalentní.
+
+\begin{verbatim}
+lp.exe data.lp
+\end{verbatim}
+
+Tento příkaz spustí program \texttt{lp.exe} s vstupním souborem \texttt{data.lp} a výsledek optimalizace bude vypsán na obrazovku. Varování a chybová hlášení jsou vždy vypisována na konzoli.
+
+\subsection{Možné návratové hodnoty a varování}
+
+\subsubsection*{Návratové hodnoty}
+\begin{itemize}
+    \item \texttt{EXIT\_SUCCESS (0)}: Program úspěšně dokončil svou činnost.
+    \item \texttt{EXIT\_INVALID\_INPUT\_FILE (1)}: Vstupní soubor nebyl nalezen.
+    \item \texttt{EXIT\_INVALID\_OUTPUT\_FILE (2)}: Neplatný výstupní soubor.
+    \item \texttt{EXIT\_SYNTAX\_ERROR (11)}: Chyba syntaxe ve vstupním souboru.
+    \item \texttt{EXIT\_MALLOC\_ERROR (1001)}: Chyba při alokaci paměti.
+    \item \texttt{EXIT\_UNKNOWN\_VAR (10)}: Neznámá proměnná ve vstupním souboru. Na konzoli je vypsán i její název.
+    \item \texttt{EXIT\_OBJECTIVE\_UNBOUNDED (20)}: Cílová funkce je neomezená.
+    \item \texttt{EXIT\_OBJECTIVE\_INFEASIBLE (21)}: Neexistuje žádné přípustné řešení.
+\end{itemize}
+
+\subsubsection*{Varování}
+Za běhu programu se může objevit následující varování:
+\begin{itemize}
+    \item Nepoužitá proměnná:
+        \begin{verbatim}
+        Warning: unused variable '<název proměnné>'!
+        \end{verbatim}
+\end{itemize}
+
+\section{Ukázky běhu programu}
+
+\subsection{Úloha s konečným řešením}
+\setuxprompt {filipn@GG}{/usr/Nemesis}
+\begin{console}{Ukázka běhu programu - konečné řešení\label{testKR}}
+`\uxprompt`cat ./test.lp
+\ uloha z uvodu zadani
+Subject To \ poradi neni fixni
+vyroba: x_1 + 2x_2 <= 8
+baleni: 2 *x_1 + 1 * x_2 <= 6
+Generals
+x_2 x_1 x_3
+Bounds
+0 <= x_1
+0 <= x_2
+Maximize
+3x_1+ 2 * x_2 \ ucelova funkce
+End
+`\uxprompt`./lp.exe test.lp
+Warning: unused variable 'x_3'!
+x_2 = 3.333333
+x_1 = 1.333333
+`\uxprompt`echo $?
+0
+\end{console}
+
+\subsection{Úloha s neomezeným řešením}
+\setuxprompt {filipn@WP}{/usr/Nemesis}
+\begin{console}{Ukázka běhu programu - neomezené řešení\label{testNR}}
+`\uxprompt`cat ./test.lp
+\ uloha z uvodu zadani, ale s otocenymi operatory v Subject To
+Subject To \ poradi neni fixni
+vyroba: x_1 + 2x_2 >= 8
+baleni: 2 *x_1 + 1 * x_2 >= 6
+Generals
+x_2 x_1 x_3
+Bounds
+0 <= x_1
+0 <= x_2
+Maximize
+3x_1+ 2 * x_2 \ ucelova funkce
+End
+`\uxprompt`./lp.exe test.lp
+Warning: unused variable 'x_3'!
+Objective function is unbounded.
+`\uxprompt`echo $?
+20
+\end{console}
+
+\subsection{Úloha bez řešení}
+\setuxprompt {filipn@EZ}{/usr/Nemesis}
+\begin{console}{Ukázka běhu programu - bez řešení\label{testBR}}
+`\uxprompt`cat ./test.lp
+\ poradi neni fixni
+Subject To
+ca: (-2var_x + 1 * var_y) >= 2
+cb: var_x - [2var_y] >= 2
+Minimize
+var_x - var_y
+Generals
+var_x var_y
+Bounds
+var_x >= 0
+var_y >= 0
+End
+`\uxprompt`./lp.exe test.lp
+No feasible solution exists.
+`\uxprompt`echo $?
+21
+\end{console}
+%
+%
+%
+%--------ZÁVĚR
+%
+%
+%
+\chapter{Závěr}
+
+Cílem této semestrální práce bylo navrhnout a implementovat program, který řeší úlohy lineárního programování. Program byl úspěšně navržen a implementován v jazyce ANSI C, přičemž byly využity různé algoritmy a datové struktury pro efektivní zpracování a řešení optimalizačních úloh.
+
+Během vývoje programu jsem se zaměřil na několik klíčových aspektů:
+\begin{itemize}
+    \item Správné načtení a syntaktická analýza vstupních dat ve formátu LP.
+    \item Implementace simplexové metody s velkým M pro nalezení optimálního řešení.
+    \item Ošetření specifických scénářů, jako je neomezenost nebo neřešitelnost úlohy.
+    \item Generování výstupu, který poskytuje uživateli přehledné a srozumitelné výsledky.
+\end{itemize}
+
+Program Nemesis byl testován na různých úlohách lineárního programování a prokázal svou schopnost efektivně a správně řešit širokou škálu optimalizačních problémů. Během testování jsem narazil na několik výzev, včetně specifického problému s nástrojem Valgrind, který hlásil chybu "impossible happened".
+
+Celkově lze říci, že cíle semestrální práce byly splněny a program Nemesis představuje užitečný nástroj pro řešení úloh lineárního programování. V budoucnu by bylo možné program dále rozšířit o další optimalizační metody a vylepšit jeho uživatelské rozhraní pro ještě lepší uživatelský zážitek.
+%
+%
+%
+%--------KONEC
+%
+%
+%
+\backmatter
+\printbibliography
+%\listoffigures
+%\listoftables
+\listoflistings
+\backpage
+\end{document}
