@@ -1,6 +1,6 @@
 # Nemesis
 
-Nemesis je konzolová aplikace určená k řešení problémů lineárního programování pomocí simplexové metody s technikou velkého M. Program je napsán v ANSI C a je určen k přenositelnosti mezi různými operačními systémy.
+Nemesis je konzolová aplikace určená k řešení problémů lineárního programování pomocí simplexové metody s technikou velkého M. Program je napsán v ANSI C a je přenositelný mezi různými operačními systémy.
 
 ## Funkce
 
